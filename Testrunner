@@ -3,19 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Mein 3D PWA Game</title>
+  <title>Bee Runner PWA</title>
   
-  <!-- iOS PWA Meta Tags (Wichtig für Safari Vollbild) -->
+  <!-- iOS PWA Meta Tags -->
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="3D Game">
-  <meta name="theme-color" content="#000000">
+  <meta name="apple-mobile-web-app-title" content="Bee Runner">
+  <meta name="theme-color" content="#1a1a1a">
 
   <style>
     * {
       touch-action: manipulation;
       user-select: none;
       -webkit-user-select: none;
+      box-sizing: border-box;
     }
     body, html {
       margin: 0;
@@ -23,8 +24,13 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #000;
+      background-color: #1a1a1a;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
     }
     canvas {
       display: block;
@@ -36,44 +42,111 @@
       top: 20px;
       left: 0;
       width: 100%;
-      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 20px;
       color: #fff;
-      font-size: 18px;
+      font-size: 20px;
       font-weight: bold;
       text-shadow: 0 2px 4px rgba(0,0,0,0.8);
       pointer-events: none;
       z-index: 10;
     }
+    #controls {
+      position: absolute;
+      bottom: 30px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-around;
+      padding: 0 20px;
+      z-index: 20;
+    }
+    .btn {
+      background: rgba(255, 204, 0, 0.85);
+      color: #000;
+      border: none;
+      padding: 18px 35px;
+      font-size: 22px;
+      font-weight: bold;
+      border-radius: 50px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+      cursor: pointer;
+    }
+    .btn:active {
+      transform: scale(0.95);
+      background: #ffcc00;
+    }
+    #game-over {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      z-index: 30;
+    }
+    #game-over h1 { font-size: 36px; margin-bottom: 10px; color: #ffcc00; }
+    #restart-btn {
+      margin-top: 20px;
+      padding: 15px 30px;
+      font-size: 20px;
+      background: #ffcc00;
+      border: none;
+      border-radius: 25px;
+      font-weight: bold;
+    }
   </style>
 
-  <!-- Three.js & GLTFLoader für 3D-Modelle -->
+  <!-- Three.js & GLTFLoader -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body>
 
-  <div id="ui">Zum Home-Bildschirm hinzufügen & im Vollbild spielen!</div>
+  <div id="game-container">
+    <div id="ui">
+      <div id="score">Score: 0</div>
+      <div id="coins">Blumen: 0</div>
+    </div>
+
+    <div id="controls">
+      <button class="btn" id="left-btn">◄</button>
+      <button class="btn" id="right-btn">►</button>
+    </div>
+
+    <div id="game-over">
+      <h1>GAME OVER</h1>
+      <p id="final-score">Score: 0</p>
+      <button id="restart-btn" onclick="resetGame()">Nochmal spielen</button>
+    </div>
+  </div>
 
   <script>
     // -------------------------------------------------------------------
-    // 1. PWA Dynamic Manifest & Service Worker Injection (für iOS Safari)
+    // 1. PWA Dynamic Manifest & Service Worker Injection
     // -------------------------------------------------------------------
     const manifest = {
-      "name": "3D PWA Game",
-      "short_name": "3D Game",
+      "name": "Bee Runner",
+      "short_name": "BeeRunner",
       "start_url": "./",
       "display": "standalone",
-      "background_color": "#000000",
-      "theme_color": "#000000",
+      "background_color": "#1a1a1a",
+      "theme_color": "#ffcc00",
       "orientation": "portrait",
       "icons": [
         {
-          "src": "https://via.placeholder.com/192/007AFF/ffffff?text=3D+Game",
+          "src": "https://via.placeholder.com/192/ffcc00/000000?text=Bee",
           "sizes": "192x192",
           "type": "image/png"
         },
         {
-          "src": "https://via.placeholder.com/512/007AFF/ffffff?text=3D+Game",
+          "src": "https://via.placeholder.com/512/ffcc00/000000?text=Bee",
           "sizes": "512x512",
           "type": "image/png"
         }
@@ -81,97 +154,433 @@
     };
 
     const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-    const manifestUrl = URL.createObjectURL(manifestBlob);
     const manifestLink = document.createElement('link');
     manifestLink.rel = 'manifest';
-    manifestLink.href = manifestUrl;
+    manifestLink.href = URL.createObjectURL(manifestBlob);
     document.head.appendChild(manifestLink);
 
-    // Dynamic Service Worker Registrierung
     if ('serviceWorker' in navigator) {
       const swCode = `
-        const CACHE_NAME = 'pwa-3d-game-v1';
-        self.addEventListener('install', (e) => {
-          e.waitUntil(self.skipWaiting());
-        });
-        self.addEventListener('activate', (e) => {
-          e.waitUntil(self.clients.claim());
-        });
-        self.addEventListener('fetch', (e) => {
-          e.respondWith(
-            caches.match(e.request).then((res) => res || fetch(e.request))
-          );
-        });
+        self.addEventListener('install', (e) => e.waitUntil(self.skipWaiting()));
+        self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
+        self.addEventListener('fetch', (e) => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
       `;
-      const swBlob = new Blob([swCode], { type: 'text/javascript' });
-      const swUrl = URL.createObjectURL(swBlob);
-      navigator.serviceWorker.register(swUrl).catch(err => console.log('SW Info:', err));
+      navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'text/javascript' })));
     }
 
     // -------------------------------------------------------------------
-    // 2. 3D-Spiel mit Three.js & externe 3D-Modell-Einbindung
+    // 2. Bee Runner 3D Game Logic
     // -------------------------------------------------------------------
-    const scene = new THREE.Scene();
-    scene.background = new THREE.Color(0x111122);
+    let scene, camera, renderer;
+    let bee, lanes = [-2, 0, 2], currentLane = 1;
+    let obstacles = [], flowers = [];
+    let score = 0, coins = 0, gameActive = true;
+    let speed = 0.2;
 
-    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-    const renderer = new THREE.WebGLRenderer({ antialias: true });
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-    document.body.appendChild(renderer.domElement);
+    function init() {
+      const container = document.getElementById('game-container');
+      
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x87CEEB); // Himmelblau
+      scene.fog = new THREE.Fog(0x87CEEB, 20, 50);
 
-    // Lichtquellen für 3D-Schatten & Details
-    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
-    scene.add(ambientLight);
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+      camera.position.set(0, 4, 8);
+      camera.lookAt(0, 1, 0);
 
-    const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
-    dirLight.position.set(5, 10, 7.5);
-    scene.add(dirLight);
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
 
-    camera.position.set(0, 2, 5);
+      // Licht
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+      scene.add(ambientLight);
 
-    let playerModel = null;
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      dirLight.position.set(5, 15, 10);
+      scene.add(dirLight);
 
-    // Heruntergeladenes 3D-Modell im .glb / .gltf Format einbinden
-    const loader = new THREE.GLTFLoader();
-    
-    // Du kannst hier deinen eigenen Link zu einer .glb-Datei oder deine lokale Datei z. B. './mein_objekt.glb' eintragen
-    const modelUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb';
+      // Boden (Wiese)
+      const groundGeo = new THREE.PlaneGeometry(10, 100);
+      const groundMat = new THREE.MeshBasicMaterial({ color: 0x4CAF50 });
+      const ground = new THREE.Mesh(groundGeo, groundMat);
+      ground.rotation.x = -Math.PI / 2;
+      ground.position.z = -20;
+      scene.add(ground);
 
-    loader.load(
-      modelUrl,
-      function (gltf) {
-        playerModel = gltf.scene;
-        playerModel.scale.set(0.8, 0.8, 0.8);
-        playerModel.position.set(0, 0, 0);
-        scene.add(playerModel);
-      },
-      undefined,
-      function (error) {
-        console.error("Fehler beim Laden des 3D-Modells:", error);
+      // Biene erstellen (3D Mesh)
+      const beeGroup = new THREE.Group();
+      const bodyGeo = new THREE.SphereGeometry(0.5, 16, 16);
+      const bodyMat = new THREE.MeshStandardMaterial({ color: 0xFFCC00 });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      body.scale.set(1, 1, 1.3);
+      beeGroup.add(body);
+
+      // Streifen
+      const stripeGeo = new THREE.CylinderGeometry(0.51, 0.51, 0.2, 16);
+      const stripeMat = new THREE.MeshStandardMaterial({ color: 0x111111 });
+      const stripe = new THREE.Mesh(stripeGeo, stripeMat);
+      stripe.rotation.x = Math.PI / 2;
+      beeGroup.add(stripe);
+
+      bee = beeGroup;
+      bee.position.set(lanes[currentLane], 1, 0);
+      scene.add(bee);
+
+      // Event Listener für Touch & Buttons
+      document.getElementById('left-btn').addEventListener('touchstart', (e) => { e.preventDefault(); moveLeft(); });
+      document.getElementById('right-btn').addEventListener('touchstart', (e) => { e.preventDefault(); moveRight(); });
+Das liegt daran, dass der Platzhalter-Text oder der Platzhalter-Link noch über dem Canvas liegt oder das 3D-Modell beim Laden kurz braucht, um gerendert zu werden.
+
+Hier ist ein vollständig überarbeitetes **Bee Runner PWA-Spiel**, das **direkt im Browser und als iOS-PWA (Home-Bildschirm)** läuft – komplett mit 3D-Grafik, Steuerung, Hindernissen und Münzen, ohne externe Ladehemmungen:
+
+```html
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>Bee Runner 3D</title>
+  
+  <!-- iOS PWA Einstellungen für echtes Vollbild -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Bee Runner">
+  <meta name="theme-color" content="#1a1a2e">
+
+  <style>
+    * {
+      box-sizing: border-box;
+      user-select: none;
+      -webkit-user-select: none;
+      touch-action: manipulation;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #1a1a2e;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    #hud {
+      position: absolute;
+      top: 40px;
+      left: 0;
+      width: 100%;
+      display: flex;
+      justify-content: space-between;
+      padding: 0 20px;
+      box-sizing: border-box;
+      color: #fff;
+      font-size: 20px;
+      font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      pointer-events: none;
+      z-index: 10;
+    }
+    #controls-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      z-index: 5;
+    }
+    .touch-zone {
+      flex: 1;
+      height: 100%;
+    }
+    #game-over {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.85);
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+      z-index: 20;
+    }
+    #game-over h1 { font-size: 36px; margin-bottom: 10px; color: #ff4757; }
+    #restart-btn {
+      margin-top: 20px;
+      padding: 15px 30px;
+      font-size: 18px;
+      font-weight: bold;
+      background: #ffa502;
+      border: none;
+      border-radius: 25px;
+      color: #000;
+      cursor: pointer;
+    }
+  </style>
+
+  <!-- Three.js 3D Engine -->
+  <script src="[https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js](https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js)"></script>
+</head>
+<body>
+
+  <div id="game-container">
+    <div id="hud">
+      <div id="score-text">Münzen: 0</div>
+      <div id="dist-text">Strecke: 0m</div>
+    </div>
+
+    <!-- Links / Rechts Antippen auf dem Smartphone -->
+    <div id="controls-overlay">
+      <div class="touch-zone" id="touch-left"></div>
+      <div class="touch-zone" id="touch-right"></div>
+    </div>
+
+    <div id="game-over">
+      <h1>GAME OVER</h1>
+      <p id="final-score">Münzen: 0</p>
+      <button id="restart-btn" onclick="resetGame()">Nochmal spielen</button>
+    </div>
+  </div>
+
+  <script>
+    // -------------------------------------------------------------------
+    // PWA Manifest & Service Worker Registrierung
+    // -------------------------------------------------------------------
+    const manifest = {
+      "name": "Bee Runner 3D",
+      "short_name": "BeeRunner",
+      "start_url": "./",
+      "display": "standalone",
+      "background_color": "#1a1a2e",
+      "theme_color": "#1a1a2e",
+      "orientation": "portrait"
+    };
+    const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = URL.createObjectURL(manifestBlob);
+    document.head.appendChild(manifestLink);
+
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        self.addEventListener('install', e => self.skipWaiting());
+        self.addEventListener('activate', e => self.clients.claim());
+        self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
+      `;
+      navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'text/javascript' })));
+    }
+
+    // -------------------------------------------------------------------
+    // 3D Spiel-Logik (Three.js)
+    // -------------------------------------------------------------------
+    let scene, camera, renderer, beeGroup;
+    let currentLane = 1; // 0: Links, 1: Mitte, 2: Rechts
+    const laneX = [-2, 0, 2];
+    let score = 0;
+    let distance = 0;
+    let isGameOver = false;
+
+    let obstacles = [];
+    let coins = [];
+
+    function init() {
+      const container = document.getElementById('game-container');
+
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x1a1a2e);
+      scene.fog = new THREE.Fog(0x1a1a2e, 10, 50);
+
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 100);
+      camera.position.set(0, 3, 6);
+      camera.lookAt(0, 1, 0);
+
+      renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+      container.appendChild(renderer.domElement);
+
+      // Licht
+      const ambientLight = new THREE.AmbientLight(0xffffff, 0.8);
+      scene.add(ambientLight);
+      const dirLight = new THREE.DirectionalLight(0xffffff, 1.2);
+      dirLight.position.set(5, 10, 5);
+      scene.add(dirLight);
+
+      // 3D-Biene erzeugen (Prozedural aufgebaut für blitzschnelles Laden)
+      beeGroup = new THREE.Group();
+      
+      // Körper (Schwarz-Gelb)
+      const bodyGeo = new THREE.SphereGeometry(0.5, 16, 16);
+      bodyGeo.scale(0.8, 0.8, 1.2);
+      const bodyMat = new THREE.MeshStandardMaterial({ color: #f1c40f });
+      const body = new THREE.Mesh(bodyGeo, bodyMat);
+      beeGroup.add(body);
+
+      // Flügel
+      const wingGeo = new THREE.BoxGeometry(0.8, 0.05, 0.4);
+      const wingMat = new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 });
+      const leftWing = new THREE.Mesh(wingGeo, wingMat);
+      leftWing.position.set(-0.5, 0.3, 0);
+      const rightWing = new THREE.Mesh(wingGeo, wingMat);
+      rightWing.position.set(0.5, 0.3, 0);
+      beeGroup.add(leftWing);
+      beeGroup.add(rightWing);
+
+      beeGroup.position.set(0, 1, 0);
+      scene.add(beeGroup);
+
+      // Laufsteg / Boden
+      const trackGeo = new THREE.PlaneGeometry(7, 100);
+      const trackMat = new THREE.MeshStandardMaterial({ color: 0x2c3e50 });
+      const track = new THREE.Mesh(trackGeo, trackMat);
+      track.rotation.x = -Math.PI / 2;
+      track.position.z = -40;
+      scene.add(track);
+
+      // Steuerung Event-Listener
+      document.getElementById('touch-left').addEventListener('click', () => moveBee(-1));
+      document.getElementById('touch-right').addEventListener('click', () => moveBee(1));
+      
+      window.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowLeft') moveBee(-1);
+        if (e.key === 'ArrowRight') moveBee(1);
+      });
+
+      spawnObjects();
+      animate();
+    }
+
+    function moveBee(dir) {
+      if (isGameOver) return;
+      currentLane = Math.max(0, Math.min(2, currentLane + dir));
+    }
+
+    function spawnObjects() {
+      for (let i = 0; i < 15; i++) {
+        spawnObstacle(-10 - i * 8);
+        spawnCoin(-14 - i * 8);
       }
-    );
+    }
 
-    // Game Loop / Animation
+    function spawnObstacle(zPos) {
+      const lane = Math.floor(Math.random() * 3);
+      const geo = new THREE.BoxGeometry(0.8, 0.8, 0.8);
+      const mat = new THREE.MeshStandardMaterial({ color: 0xe74c3c });
+      const obstacle = new THREE.Mesh(geo, mat);
+      obstacle.position.set(laneX[lane], 0.8, zPos);
+      scene.add(obstacle);
+      obstacles.push(obstacle);
+    }
+
+    function spawnCoin(zPos) {
+      const lane = Math.floor(Math.random() * 3);
+      const geo = new THREE.CylinderGeometry(0.3, 0.3, 0.1, 16);
+      const mat = new THREE.MeshStandardMaterial({ color: 0xf1c40f, metalness: 0.8 });
+      const coin = new THREE.Mesh(geo, mat);
+      coin.rotation.x = Math.PI / 2;
+      coin.position.set(laneX[lane], 1, zPos);
+      scene.add(coin);
+      coins.push(coin);
+    }
+
     function animate() {
+      if (isGameOver) return;
       requestAnimationFrame(animate);
 
-      // Animation: Modell drehen, sobald es geladen ist
-      if (playerModel) {
-        playerModel.rotation.y += 0.015;
+      // Biene fließend auf die gewählte Spur bewegen
+      beeGroup.position.x += (laneX[currentLane] - beeGroup.position.x) * 0.2;
+      
+      // Sanftes Wackeln/Fliegen der Biene
+      beeGroup.position.y = 1 + Math.sin(Date.now() * 0.005) * 0.1;
+
+      distance += 0.1;
+      document.getElementById('dist-text').innerText = `Strecke: ${Math.floor(distance)}m`;
+
+      const speed = 0.2;
+
+      // Hindernisse bewegen & Kollision prüfen
+      for (let i = obstacles.length - 1; i >= 0; i--) {
+        const obs = obstacles[i];
+        obs.position.z += speed;
+
+        // Kollisionsabfrage
+        if (Math.abs(obs.position.z - beeGroup.position.z) < 0.6 &&
+            Math.abs(obs.position.x - beeGroup.position.x) < 0.6) {
+          triggerGameOver();
+        }
+
+        if (obs.position.z > 5) {
+          obs.position.z = -100;
+          obs.position.x = laneX[Math.floor(Math.random() * 3)];
+        }
+      }
+
+      // Münzen bewegen & einsammeln
+      for (let i = coins.length - 1; i >= 0; i--) {
+        const coin = coins[i];
+        coin.position.z += speed;
+        coin.rotation.z += 0.05;
+
+        // Münze eingesammelt
+        if (Math.abs(coin.position.z - beeGroup.position.z) < 0.6 &&
+            Math.abs(coin.position.x - beeGroup.position.x) < 0.6) {
+          score += 10;
+          document.getElementById('score-text').innerText = `Münzen: ${score}`;
+          coin.position.z = -100;
+          coin.position.x = laneX[Math.floor(Math.random() * 3)];
+        }
+
+        if (coin.position.z > 5) {
+          coin.position.z = -100;
+          coin.position.x = laneX[Math.floor(Math.random() * 3)];
+        }
       }
 
       renderer.render(scene, camera);
     }
 
-    animate();
+    function triggerGameOver() {
+      isGameOver = true;
+      document.getElementById('final-score').innerText = `Münzen gesammelt: ${score}`;
+      document.getElementById('game-over').style.display = 'flex';
+    }
 
-    // Responsive Anpassung für Mobile Screens & Orientierungswechsel
+    function resetGame() {
+      score = 0;
+      distance = 0;
+      currentLane = 1;
+      isGameOver = false;
+      document.getElementById('score-text').innerText = `Münzen: 0`;
+      document.getElementById('game-over').style.display = 'none';
+
+      // Objekte zurücksetzen
+      obstacles.forEach((obs, idx) => { obs.position.z = -10 - idx * 8; });
+      coins.forEach((coin, idx) => { coin.position.z = -14 - idx * 8; });
+
+      animate();
+    }
+
     window.addEventListener('resize', () => {
       camera.aspect = window.innerWidth / window.innerHeight;
       camera.updateProjectionMatrix();
       renderer.setSize(window.innerWidth, window.innerHeight);
     });
+
+    init();
   </script>
 </body>
 </html>
