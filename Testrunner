@@ -2,73 +2,176 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Mein 3D PWA Game</title>
+  
+  <!-- iOS PWA Meta Tags (Wichtig für Safari Vollbild) -->
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="3D Game">
+  <meta name="theme-color" content="#000000">
+
   <style>
-    body { margin: 0; overflow: hidden; background: #000; }
-    canvas { display: block; }
+    * {
+      touch-action: manipulation;
+      user-select: none;
+      -webkit-user-select: none;
+    }
+    body, html {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: #000;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    }
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+    }
+    #ui {
+      position: absolute;
+      top: 20px;
+      left: 0;
+      width: 100%;
+      text-align: center;
+      color: #fff;
+      font-size: 18px;
+      font-weight: bold;
+      text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+      pointer-events: none;
+      z-index: 10;
+    }
   </style>
-  <!-- Three.js Bibliothek für 3D-Grafik -->
+
+  <!-- Three.js & GLTFLoader für 3D-Modelle -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-  <!-- GLTFLoader zum Laden von 3D-Modellen (.glb/.gltf) -->
   <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
 </head>
 <body>
 
-<script>
-  // 1. 3D-Szene, Kamera & Renderer aufsetzen
-  const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
-  const renderer = new THREE.WebGLRenderer({ antialias: true });
-  renderer.setSize(window.innerWidth, window.innerHeight);
-  document.body.appendChild(renderer.domElement);
+  <div id="ui">Zum Home-Bildschirm hinzufügen & im Vollbild spielen!</div>
 
-  // 2. Licht hinzufügen (damit das 3D-Modell sichtbar ist)
-  const light = new THREE.DirectionalLight(0xffffff, 1.5);
-  light.position.set(5, 10, 7.5);
-  scene.add(light);
-  scene.add(new THREE.AmbientLight(0x404040, 2));
+  <script>
+    // -------------------------------------------------------------------
+    // 1. PWA Dynamic Manifest & Service Worker Injection (für iOS Safari)
+    // -------------------------------------------------------------------
+    const manifest = {
+      "name": "3D PWA Game",
+      "short_name": "3D Game",
+      "start_url": "./",
+      "display": "standalone",
+      "background_color": "#000000",
+      "theme_color": "#000000",
+      "orientation": "portrait",
+      "icons": [
+        {
+          "src": "https://via.placeholder.com/192/007AFF/ffffff?text=3D+Game",
+          "sizes": "192x192",
+          "type": "image/png"
+        },
+        {
+          "src": "https://via.placeholder.com/512/007AFF/ffffff?text=3D+Game",
+          "sizes": "512x512",
+          "type": "image/png"
+        }
+      ]
+    };
 
-  camera.position.set(0, 2, 5);
+    const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
+    const manifestUrl = URL.createObjectURL(manifestBlob);
+    const manifestLink = document.createElement('link');
+    manifestLink.rel = 'manifest';
+    manifestLink.href = manifestUrl;
+    document.head.appendChild(manifestLink);
 
-  let playerModel = null;
-
-  // 3. Das 3D-Modell (.glb/.gltf) von einer URL laden
-  const loader = new THREE.GLTFLoader();
-  
-  // Ersetze diese URL durch den Pfad zu deinem eigenen 3D-Modell
-  const modelUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb';
-
-  loader.load(modelUrl, function (gltf) {
-    playerModel = gltf.scene;
-    playerModel.scale.set(0.8, 0.8, 0.8); // Größe anpassen
-    scene.add(playerModel);
-    console.log("3D-Modell erfolgreich geladen!");
-  }, undefined, function (error) {
-    console.error("Fehler beim Laden des Modells:", error);
-  });
-
-  // 4. Spiel-Schleife (Animation & Steuerung)
-  function animate() {
-    requestAnimationFrame(animate);
-
-    // Wenn das 3D-Modell geladen ist, lass es langsam rotieren
-    if (playerModel) {
-      playerModel.rotation.y += 0.01;
+    // Dynamic Service Worker Registrierung
+    if ('serviceWorker' in navigator) {
+      const swCode = `
+        const CACHE_NAME = 'pwa-3d-game-v1';
+        self.addEventListener('install', (e) => {
+          e.waitUntil(self.skipWaiting());
+        });
+        self.addEventListener('activate', (e) => {
+          e.waitUntil(self.clients.claim());
+        });
+        self.addEventListener('fetch', (e) => {
+          e.respondWith(
+            caches.match(e.request).then((res) => res || fetch(e.request))
+          );
+        });
+      `;
+      const swBlob = new Blob([swCode], { type: 'text/javascript' });
+      const swUrl = URL.createObjectURL(swBlob);
+      navigator.serviceWorker.register(swUrl).catch(err => console.log('SW Info:', err));
     }
 
-    renderer.render(scene, camera);
-  }
+    // -------------------------------------------------------------------
+    // 2. 3D-Spiel mit Three.js & externe 3D-Modell-Einbindung
+    // -------------------------------------------------------------------
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(0x111122);
 
-  animate();
-
-  // Fenstergröße automatisch anpassen
-  window.addEventListener('resize', () => {
-    camera.aspect = window.innerWidth / window.innerHeight;
-    camera.updateProjectionMatrix();
+    const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true });
     renderer.setSize(window.innerWidth, window.innerHeight);
-  });
-</script>
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    document.body.appendChild(renderer.domElement);
 
+    // Lichtquellen für 3D-Schatten & Details
+    const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
+    scene.add(ambientLight);
+
+    const dirLight = new THREE.DirectionalLight(0xffffff, 2.0);
+    dirLight.position.set(5, 10, 7.5);
+    scene.add(dirLight);
+
+    camera.position.set(0, 2, 5);
+
+    let playerModel = null;
+
+    // Heruntergeladenes 3D-Modell im .glb / .gltf Format einbinden
+    const loader = new THREE.GLTFLoader();
+    
+    // Du kannst hier deinen eigenen Link zu einer .glb-Datei oder deine lokale Datei z. B. './mein_objekt.glb' eintragen
+    const modelUrl = 'https://raw.githubusercontent.com/KhronosGroup/glTF-Sample-Models/master/2.0/Duck/glTF-Binary/Duck.glb';
+
+    loader.load(
+      modelUrl,
+      function (gltf) {
+        playerModel = gltf.scene;
+        playerModel.scale.set(0.8, 0.8, 0.8);
+        playerModel.position.set(0, 0, 0);
+        scene.add(playerModel);
+      },
+      undefined,
+      function (error) {
+        console.error("Fehler beim Laden des 3D-Modells:", error);
+      }
+    );
+
+    // Game Loop / Animation
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Animation: Modell drehen, sobald es geladen ist
+      if (playerModel) {
+        playerModel.rotation.y += 0.015;
+      }
+
+      renderer.render(scene, camera);
+    }
+
+    animate();
+
+    // Responsive Anpassung für Mobile Screens & Orientierungswechsel
+    window.addEventListener('resize', () => {
+      camera.aspect = window.innerWidth / window.innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(window.innerWidth, window.innerHeight);
+    });
+  </script>
 </body>
 </html>
