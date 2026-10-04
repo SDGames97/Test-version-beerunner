@@ -250,15 +250,8 @@
     manifestLink.href = URL.createObjectURL(manifestBlob);
     document.head.appendChild(manifestLink);
 
-    // Dynamic Service Worker registration
-    if ('serviceWorker' in navigator) {
-      const swCode = `
-        self.addEventListener('install', e => self.skipWaiting());
-        self.addEventListener('activate', e => self.clients.claim());
-        self.addEventListener('fetch', e => e.respondWith(fetch(e.request).catch(() => caches.match(e.request))));
-      `;
-      navigator.serviceWorker.register(URL.createObjectURL(new Blob([swCode], { type: 'text/javascript' })));
-    }
+    
+    
 
     let scene, camera, renderer, beeGroup, wings = [], shieldAuraMesh;
     let currentLane = 1; // 0: Left (-2.2), 1: Center (0), 2: Right (2.2)
