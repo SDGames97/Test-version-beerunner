@@ -2,14 +2,16 @@
 <html lang="de">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Bee Runner 3D PWA</title>
-  
-  <!-- iOS PWA Meta Tags for full-screen web app capability -->
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Bee Runner">
+
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
   <meta name="theme-color" content="#FFB703">
+
+  <title>Bee Runner 3D</title>
+
+  <!-- Three.js -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
   <style>
     * {
@@ -18,49 +20,51 @@
       -webkit-user-select: none;
       touch-action: none;
     }
-    body, html {
+
+    html, body {
       margin: 0;
       padding: 0;
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #87CEEB;
+      background: #87CEEB;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     }
+
     #game-container {
       position: relative;
       width: 100%;
       height: 100%;
     }
+
     canvas {
       display: block;
       width: 100%;
       height: 100%;
     }
-    
-    /* HUD UI Elements */
+
     #hud {
       position: absolute;
       top: max(20px, env(safe-area-inset-top));
       left: 0;
       width: 100%;
+      padding: 0 16px;
       display: flex;
       flex-direction: column;
       gap: 10px;
-      padding: 0 16px;
       pointer-events: none;
       z-index: 10;
     }
+
     .hud-top-row {
       display: flex;
       justify-content: space-between;
       align-items: center;
       width: 100%;
     }
+
     .hud-card {
       background: rgba(255, 255, 255, 0.92);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
       padding: 8px 16px;
       border-radius: 20px;
       border: 3px solid #FB8500;
@@ -73,7 +77,6 @@
       font-size: 18px;
     }
 
-    /* Shield Powerup Progress Bar */
     #shield-bar-container {
       width: 100%;
       max-width: 280px;
@@ -87,6 +90,7 @@
       gap: 10px;
       box-shadow: 0 0 16px rgba(0, 180, 216, 0.7);
     }
+
     #shield-bar-bg {
       flex: 1;
       height: 12px;
@@ -94,13 +98,14 @@
       border-radius: 8px;
       overflow: hidden;
     }
+
     #shield-bar-fill {
       width: 100%;
       height: 100%;
       background: linear-gradient(90deg, #0077B6, #90E0EF);
       border-radius: 8px;
-      transition: width 0.1s linear;
     }
+
     #shield-timer-text {
       color: #90E0EF;
       font-size: 15px;
@@ -109,42 +114,51 @@
       text-shadow: 0 1px 3px #000;
     }
 
-    /* Floating Score Popup (+20P) */
     .floating-text {
       position: absolute;
       color: #FFB703;
       font-weight: 900;
       font-size: 36px;
-      text-shadow: -2px -2px 0 #000, 2px -2px 0 #000, -2px 2px 0 #000, 2px 2px 0 #000, 0 4px 12px rgba(0,0,0,0.6);
+      text-shadow:
+        -2px -2px 0 #000,
+         2px -2px 0 #000,
+        -2px  2px 0 #000,
+         2px  2px 0 #000;
       pointer-events: none;
       animation: floatUp 0.95s ease-out forwards;
       z-index: 15;
     }
+
     @keyframes floatUp {
-      0% { opacity: 1; transform: translateY(0) scale(0.6); }
-      50% { transform: translateY(-45px) scale(1.35); }
-      100% { opacity: 0; transform: translateY(-85px) scale(1); }
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(0.6);
+      }
+
+      50% {
+        transform: translateY(-45px) scale(1.35);
+      }
+
+      100% {
+        opacity: 0;
+        transform: translateY(-85px) scale(1);
+      }
     }
 
-    /* Game Over Overlay Modal */
     #game-over {
       position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
+      inset: 0;
       background: rgba(2, 48, 71, 0.88);
       display: none;
       flex-direction: column;
       justify-content: center;
       align-items: center;
-      color: #fff;
+      color: white;
       z-index: 30;
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
     }
+
     .modal-box {
-      background: #FFF;
+      background: white;
       padding: 28px 24px;
       border-radius: 28px;
       border: 4px solid #FFB703;
@@ -154,13 +168,15 @@
       max-width: 340px;
       box-shadow: 0 12px 35px rgba(0,0,0,0.4);
     }
+
     .modal-box h1 {
-      margin: 0 0 12px 0;
+      margin: 0 0 12px;
       font-size: 32px;
       color: #E63946;
       text-transform: uppercase;
       font-weight: 900;
     }
+
     .stat-row {
       display: flex;
       justify-content: space-between;
@@ -170,6 +186,7 @@
       border-bottom: 2px dashed #E0E0E0;
       padding-bottom: 8px;
     }
+
     #restart-btn {
       margin-top: 16px;
       width: 100%;
@@ -177,663 +194,1818 @@
       font-size: 19px;
       font-weight: 900;
       background: linear-gradient(135deg, #FFB703, #FB8500);
-      color: #FFF;
+      color: white;
       border: none;
       border-radius: 50px;
-      box-shadow: 0 6px 16px rgba(251, 133, 0, 0.4);
       cursor: pointer;
     }
-    #restart-btn:active {
-      transform: scale(0.96);
+
+    #loading {
+      position: absolute;
+      inset: 0;
+      background: #87CEEB;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #023047;
+      font-size: 24px;
+      font-weight: 900;
+      z-index: 100;
     }
   </style>
-
-  <!-- Three.js 3D Engine -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
+
 <body>
 
-  <div id="game-container">
-    <div id="hud">
-      <div class="hud-top-row">
-        <div class="hud-card">
-          <span>🪙</span>
-          <span id="score">0</span>
-        </div>
-        <div class="hud-card">
-          <span>🍯</span>
-          <span id="dist">0m</span>
-        </div>
-      </div>
+<div id="game-container">
 
-      <!-- Shield Powerup Active Timer Bar -->
-      <div id="shield-bar-container">
-        <span style="font-size: 18px;">🛡️</span>
-        <div id="shield-bar-bg">
-          <div id="shield-bar-fill"></div>
-        </div>
-        <span id="shield-timer-text">10s</span>
-      </div>
-    </div>
-
-    <!-- Game Over Screen Modal -->
-    <div id="game-over">
-      <div class="modal-box">
-        <h1>Game Over</h1>
-        <div class="stat-row">
-          <span>Punkte:</span>
-          <span id="final-score">0</span>
-        </div>
-        <div class="stat-row">
-          <span>Strecke:</span>
-          <span id="final-dist">0m</span>
-        </div>
-        <button id="restart-btn" onclick="resetGame()">NOCHMAL SPIELEN</button>
-      </div>
-    </div>
+  <div id="loading">
+    🐝 Bee Runner wird geladen...
   </div>
 
-  <script>
-    // Dynamic Manifest injection for iOS/Android home installation
-    const manifest = {
-      "name": "Bee Runner 3D",
-      "short_name": "BeeRunner",
-      "start_url": "./",
-      "display": "standalone",
-      "background_color": "#87CEEB",
-      "theme_color": "#FFB703",
-      "orientation": "portrait"
-    };
-    const manifestBlob = new Blob([JSON.stringify(manifest)], { type: 'application/json' });
-    const manifestLink = document.createElement('link');
-    manifestLink.rel = 'manifest';
-    manifestLink.href = URL.createObjectURL(manifestBlob);
-    document.head.appendChild(manifestLink);
+  <div id="hud">
 
-    
-    
+    <div class="hud-top-row">
 
-    let scene, camera, renderer, beeGroup, wings = [], shieldAuraMesh;
-    let currentLane = 1; // 0: Left (-2.2), 1: Center (0), 2: Right (2.2)
-    const lanesX = [-2.2, 0, 2.2];
+      <div class="hud-card">
+        <span>🪙</span>
+        <span id="score">0</span>
+      </div>
 
-    // Flight Dynamics & Arc Heights (Normal, Jump Fly, Duck Dive)
-    const NORMAL_Y = 1.2;
-    const HIGH_Y = 3.3;
-    const DUCK_Y = 0.35;
-    let targetY = NORMAL_Y;
-    let flightState = 'normal'; // 'normal', 'flying_high', 'ducking'
-    let flightActionTimer = null;
+      <div class="hud-card">
+        <span>🍯</span>
+        <span id="dist">0m</span>
+      </div>
 
-    // Game Metrics
-    let score = 0, distance = 0;
-    let isGameOver = false;
-    let gameSpeed = 0.34;
+    </div>
 
-    // Shield 10-Second Powerup Timer State
-    let shieldActive = false;
-    let shieldTimeLeft = 10;
-    let shieldInterval = null;
+    <div id="shield-bar-container">
 
-    let items = [];
-    let obstacles = [];
-    let decorObjects = [];
+      <span>🛡️</span>
 
-    let honeycombTex, woodTex, coinTex, potTex;
+      <div id="shield-bar-bg">
+        <div id="shield-bar-fill"></div>
+      </div>
 
-    function createProceduralTextures() {
-      // Honeycomb Pattern Track Floor
-      const canvas = document.createElement('canvas');
-      canvas.width = 256; canvas.height = 256;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#FB8500';
-      ctx.fillRect(0,0,256,256);
-      ctx.strokeStyle = '#FFB703';
-      ctx.lineWidth = 6;
-      const r = 24;
-      for(let y = 0; y < 280; y += r * 1.5) {
-        for(let x = 0; x < 280; x += r * Math.sqrt(3)) {
-          let cx = x + ((Math.floor(y / (r * 1.5)) % 2) * (r * Math.sqrt(3) / 2));
-          ctx.beginPath();
-          for (let a = 0; a < 6; a++) {
-            let angle = a * Math.PI / 3;
-            let px = cx + r * Math.cos(angle);
-            let py = y + r * Math.sin(angle);
-            if (a === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
-          }
-          ctx.closePath();
-          ctx.stroke();
-          ctx.fillStyle = '#FFC300';
-          ctx.fill();
-        }
-      }
-      honeycombTex = new THREE.CanvasTexture(canvas);
-      honeycombTex.wrapS = THREE.RepeatWrapping;
-      honeycombTex.wrapT = THREE.RepeatWrapping;
-      honeycombTex.repeat.set(1, 20);
+      <span id="shield-timer-text">10s</span>
 
-      // Wood Railing Texture
-      const wCanvas = document.createElement('canvas');
-      wCanvas.width = 128; wCanvas.height = 128;
-      const wCtx = wCanvas.getContext('2d');
-      wCtx.fillStyle = '#8B4513';
-      wCtx.fillRect(0,0,128,128);
-      wCtx.fillStyle = '#A0522D';
-      for(let i=0; i<128; i+=16) wCtx.fillRect(0, i, 128, 6);
-      woodTex = new THREE.CanvasTexture(wCanvas);
+    </div>
 
-      // Gold Bee Coin Texture
-      const cCanvas = document.createElement('canvas');
-      cCanvas.width = 128; cCanvas.height = 128;
-      const cCtx = cCanvas.getContext('2d');
-      cCtx.fillStyle = '#FFB703';
-      cCtx.beginPath(); cCtx.arc(64,64,60,0,Math.PI*2); cCtx.fill();
-      cCtx.strokeStyle = '#D48806'; cCtx.lineWidth = 8; cCtx.stroke();
-      cCtx.fillStyle = '#023047';
-      cCtx.font = 'bold 65px sans-serif';
-      cCtx.textAlign = 'center'; cCtx.textBaseline = 'middle';
-      cCtx.fillText('🐝', 64, 64);
-      coinTex = new THREE.CanvasTexture(cCanvas);
+  </div>
 
-      // Honey Pot Texture
-      const pCanvas = document.createElement('canvas');
-      pCanvas.width = 128; pCanvas.height = 128;
-      const pCtx = pCanvas.getContext('2d');
-      pCtx.fillStyle = '#D4A373';
-      pCtx.fillRect(0,0,128,128);
-      pCtx.fillStyle = '#FFB703';
-      pCtx.font = 'bold 70px sans-serif';
-      pCtx.textAlign = 'center'; pCtx.textBaseline = 'middle';
-      pCtx.fillText('🍯', 64, 64);
-      potTex = new THREE.CanvasTexture(pCanvas);
-    }
+  <div id="game-over">
 
-    function createBeeModel() {
-      beeGroup = new THREE.Group();
+    <div class="modal-box">
 
-      // Bee Body
-      const bodyGeo = new THREE.SphereGeometry(0.55, 32, 32);
-      bodyGeo.scale(1, 0.9, 1.3);
-      const bodyMat = new THREE.MeshStandardMaterial({ color: 0xFFB703, roughness: 0.3 });
-      const body = new THREE.Mesh(bodyGeo, bodyMat);
-      beeGroup.add(body);
+      <h1>Game Over</h1>
 
-      // Stripes
-      const stripeMat = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.5 });
-      [-0.1, 0.15, 0.4].forEach(zPos => {
-        const stripeGeo = new THREE.CylinderGeometry(0.56, 0.56, 0.16, 32);
-        const stripe = new THREE.Mesh(stripeGeo, stripeMat);
-        stripe.rotation.x = Math.PI / 2;
-        stripe.position.z = zPos;
-        beeGroup.add(stripe);
-      });
+      <div class="stat-row">
+        <span>Punkte:</span>
+        <span id="final-score">0</span>
+      </div>
 
-      // Eyes
-      const eyeGeo = new THREE.SphereGeometry(0.12, 16, 16);
-      const eyeMat = new THREE.MeshStandardMaterial({ color: 0x000000 });
-      const leftEye = new THREE.Mesh(eyeGeo, eyeMat);
-      leftEye.position.set(-0.25, 0.2, -0.55);
-      const rightEye = new THREE.Mesh(eyeGeo, eyeMat);
-      rightEye.position.set(0.25, 0.2, -0.55);
-      beeGroup.add(leftEye, rightEye);
+      <div class="stat-row">
+        <span>Strecke:</span>
+        <span id="final-dist">0m</span>
+      </div>
 
-      // Antennae
-      const antGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 8);
-      const antMat = new THREE.MeshBasicMaterial({ color: 0x000000 });
-      [-0.15, 0.15].forEach(xPos => {
-        const ant = new THREE.Mesh(antGeo, antMat);
-        ant.position.set(xPos, 0.55, -0.4);
-        ant.rotation.z = xPos > 0 ? -0.3 : 0.3;
-        ant.rotation.x = -0.2;
-        beeGroup.add(ant);
-      });
+      <button id="restart-btn">
+        NOCHMAL SPIELEN
+      </button>
 
-      // Translucent Wings
-      const wingGeo = new THREE.PlaneGeometry(0.75, 0.38);
-      const wingMat = new THREE.MeshStandardMaterial({
-        color: 0xE0F7FA,
-        transparent: true,
-        opacity: 0.8,
-        side: THREE.DoubleSide
-      });
-      const leftWing = new THREE.Mesh(wingGeo, wingMat);
-      leftWing.position.set(-0.45, 0.35, 0);
-      const rightWing = new THREE.Mesh(wingGeo, wingMat);
-      rightWing.position.set(0.45, 0.35, 0);
-      beeGroup.add(leftWing, rightWing);
-      wings = [leftWing, rightWing];
+    </div>
 
-      // Shield Glowing Blue Aura Mesh
-      const shieldGeo = new THREE.SphereGeometry(0.9, 32, 32);
-      const shieldMat = new THREE.MeshStandardMaterial({
-        color: 0x00B4D8,
-        transparent: true,
-        opacity: 0.45,
-        emissive: 0x0077B6,
-        roughness: 0.1
-      });
-      shieldAuraMesh = new THREE.Mesh(shieldGeo, shieldMat);
-      shieldAuraMesh.visible = false;
-      beeGroup.add(shieldAuraMesh);
+  </div>
 
-      beeGroup.position.set(lanesX[currentLane], NORMAL_Y, 0);
-      scene.add(beeGroup);
-    }
+</div>
 
-    function init() {
-      createProceduralTextures();
+<script>
 
-      const container = document.getElementById('game-container');
-      scene = new THREE.Scene();
-      scene.background = new THREE.Color(0x87CEEB);
-      scene.fog = new THREE.FogExp2(0x87CEEB, 0.018);
+"use strict";
 
-      camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 120);
-      camera.position.set(0, 4.2, 5.5);
-      camera.lookAt(0, 1.2, -4);
+/* =========================
+   SPIELVARIABLEN
+========================= */
 
-      renderer = new THREE.WebGLRenderer({ antialias: true });
-      renderer.setSize(window.innerWidth, window.innerHeight);
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
-      container.appendChild(renderer.domElement);
+let scene;
+let camera;
+let renderer;
 
-      const ambientLight = new THREE.AmbientLight(0xFFFFFF, 0.85);
-      scene.add(ambientLight);
+let beeGroup;
+let wings = [];
+let shieldAuraMesh;
 
-      const dirLight = new THREE.DirectionalLight(0xFFF3B0, 1.2);
-      dirLight.position.set(10, 20, 10);
-      scene.add(dirLight);
+let currentLane = 1;
 
-      // Track Floor
-      const trackGeo = new THREE.PlaneGeometry(7.2, 120);
-      const trackMat = new THREE.MeshStandardMaterial({ map: honeycombTex, roughness: 0.4 });
-      const track = new THREE.Mesh(trackGeo, trackMat);
-      track.rotation.x = -Math.PI / 2;
-      track.position.z = -50;
-      scene.add(track);
+const lanesX = [-2.2, 0, 2.2];
 
-      // Wooden Side Rails
-      [-3.6, 3.6].forEach(xPos => {
-        const railGeo = new THREE.BoxGeometry(0.3, 0.5, 120);
-        const railMat = new THREE.MeshStandardMaterial({ map: woodTex, roughness: 0.7 });
-        const rail = new THREE.Mesh(railGeo, railMat);
-        rail.position.set(xPos, 0.25, -50);
-        scene.add(rail);
-      });
+const NORMAL_Y = 1.2;
+const HIGH_Y = 3.3;
+const DUCK_Y = 0.35;
 
-      createBeeModel();
-      buildEnvironmentDecoration();
-      spawnInitialGameObjects();
-      setupSwipeAndKeyboardControls();
+let targetY = NORMAL_Y;
+let flightState = "normal";
+let flightActionTimer = null;
 
-      animate();
-    }
+let score = 0;
+let distance = 0;
 
-    function buildEnvironmentDecoration() {
-      [-15, 15].forEach(xPos => {
-        const grass = new THREE.Mesh(
-          new THREE.PlaneGeometry(18, 120),
-          new THREE.MeshStandardMaterial({ color: 0x70E000, roughness: 0.8 })
-        );
-        grass.rotation.x = -Math.PI / 2;
-        grass.position.set(xPos, -0.05, -50);
-        scene.add(grass);
-      });
+let isGameOver = false;
 
-      // Trees along the track
-      for (let z = -10; z > -110; z -= 14) {
-        [-8, 8].forEach(xPos => {
-          const treeGroup = new THREE.Group();
-          const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.4, 2), new THREE.MeshStandardMaterial({ color: 0x8B4513 }));
-          trunk.position.y = 1;
-          const leaves = new THREE.Mesh(new THREE.DodecahedronGeometry(1.4), new THREE.MeshStandardMaterial({ color: 0x38B000 }));
-          leaves.position.y = 2.4;
-          treeGroup.add(trunk, leaves);
-          treeGroup.position.set(xPos + (Math.random() * 2 - 1), 0, z);
-          scene.add(treeGroup);
-          decorObjects.push(treeGroup);
-        });
-      }
-    }
+let gameSpeed = 0.34;
 
-    function spawnInitialGameObjects() {
-      for (let z = -18; z > -110; z -= 9) {
-        if (Math.random() < 0.48) {
-          spawnObstacle(z);
+let shieldActive = false;
+let shieldTimeLeft = 10;
+let shieldInterval = null;
+
+let items = [];
+let obstacles = [];
+let decorObjects = [];
+
+let honeycombTex;
+let woodTex;
+let coinTex;
+let potTex;
+
+
+/* =========================
+   TEXTUREN
+========================= */
+
+function createProceduralTextures() {
+
+  const canvas = document.createElement("canvas");
+
+  canvas.width = 256;
+  canvas.height = 256;
+
+  const ctx = canvas.getContext("2d");
+
+  ctx.fillStyle = "#FB8500";
+  ctx.fillRect(0, 0, 256, 256);
+
+  ctx.strokeStyle = "#FFB703";
+  ctx.lineWidth = 6;
+
+  const r = 24;
+
+  for (let y = 0; y < 280; y += r * 1.5) {
+
+    for (let x = 0; x < 280; x += r * Math.sqrt(3)) {
+
+      const cx =
+        x +
+        ((Math.floor(y / (r * 1.5)) % 2) *
+        (r * Math.sqrt(3) / 2));
+
+      ctx.beginPath();
+
+      for (let a = 0; a < 6; a++) {
+
+        const angle = a * Math.PI / 3;
+
+        const px = cx + r * Math.cos(angle);
+        const py = y + r * Math.sin(angle);
+
+        if (a === 0) {
+          ctx.moveTo(px, py);
         } else {
-          spawnCollectible(z);
+          ctx.lineTo(px, py);
         }
       }
+
+      ctx.closePath();
+      ctx.stroke();
+
+      ctx.fillStyle = "#FFC300";
+      ctx.fill();
     }
+  }
 
-    function spawnObstacle(zPos) {
-      const lane = Math.floor(Math.random() * 3);
-      const randType = Math.random();
+  honeycombTex = new THREE.CanvasTexture(canvas);
 
-      let obsGroup = new THREE.Group();
-      let type = '';
+  honeycombTex.wrapS = THREE.RepeatWrapping;
+  honeycombTex.wrapT = THREE.RepeatWrapping;
 
-      if (randType < 0.35) {
-        // 1. MUSHROOMS (Pilze - Ground obstacle, fly over with Swipe UP)
-        type = 'mushroom';
-        const stem = new THREE.Mesh(
-          new THREE.CylinderGeometry(0.3, 0.4, 0.6, 12),
-          new THREE.MeshStandardMaterial({ color: 0xFFF8DC })
-        );
-        stem.position.y = 0.3;
+  honeycombTex.repeat.set(1, 20);
 
-        const cap = new THREE.Mesh(
-          new THREE.SphereGeometry(0.7, 16, 12, 0, Math.PI * 2, 0, Math.PI / 2),
-          new THREE.MeshStandardMaterial({ color: 0xE63946, roughness: 0.3 })
-        );
-        cap.position.y = 0.6;
 
-        obsGroup.add(stem, cap);
-      } else if (randType < 0.70) {
-        // 2. TREE BRANCHES (Baumäste - High obstacle, duck under with Swipe DOWN)
-        type = 'branch';
-        const post1 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 3, 8), new THREE.MeshStandardMaterial({ map: woodTex }));
-        post1.position.set(-0.8, 1.5, 0);
-        const post2 = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 3, 8), new THREE.MeshStandardMaterial({ map: woodTex }));
-        post2.position.set(0.8, 1.5, 0);
+  /* HOLZ */
 
-        const branch = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.22, 1.8, 8), new THREE.MeshStandardMaterial({ color: 0x5C4033 }));
-        branch.rotation.z = Math.PI / 2;
-        branch.position.set(0, 2.0, 0);
+  const wCanvas = document.createElement("canvas");
 
-        obsGroup.add(post1, post2, branch);
-      } else {
-        // 3. SPIDER WEBS (Spinnennetze - Full lane obstacle, must change lanes)
-        type = 'spiderweb';
-        const webRing = new THREE.Mesh(new THREE.TorusGeometry(0.95, 0.05, 8, 24), new THREE.MeshBasicMaterial({ color: 0xFFFFFF }));
-        webRing.position.y = 1.3;
+  wCanvas.width = 128;
+  wCanvas.height = 128;
 
-        const centerDot = new THREE.Mesh(new THREE.SphereGeometry(0.15, 8, 8), new THREE.MeshBasicMaterial({ color: 0x111111 }));
-        centerDot.position.y = 1.3;
+  const wCtx = wCanvas.getContext("2d");
 
-        obsGroup.add(webRing, centerDot);
-      }
+  wCtx.fillStyle = "#8B4513";
+  wCtx.fillRect(0, 0, 128, 128);
 
-      obsGroup.userData = { type: type };
-      obsGroup.position.set(lanesX[lane], 0, zPos);
-      scene.add(obsGroup);
-      obstacles.push(obsGroup);
-    }
+  wCtx.fillStyle = "#A0522D";
 
-    function spawnCollectible(zPos) {
-      const lane = Math.floor(Math.random() * 3);
-      const rand = Math.random();
+  for (let i = 0; i < 128; i += 16) {
+    wCtx.fillRect(0, i, 128, 6);
+  }
 
-      let item;
-      if (rand < 0.60) {
-        // Bee Coin
-        const geo = new THREE.CylinderGeometry(0.4, 0.4, 0.1, 24);
-        const mat = new THREE.MeshStandardMaterial({ map: coinTex, roughness: 0.2, metalness: 0.5 });
-        item = new THREE.Mesh(geo, mat);
-        item.rotation.x = Math.PI / 2;
-        item.userData = { type: 'coin', points: 10 };
-      } else if (rand < 0.85) {
-        // Honey Pot (+20P)
-        const geo = new THREE.CylinderGeometry(0.42, 0.35, 0.7, 16);
-        const mat = new THREE.MeshStandardMaterial({ map: potTex, roughness: 0.3 });
-        item = new THREE.Mesh(geo, mat);
-        item.userData = { type: 'pot', points: 20 };
-      } else {
-        // Shield Power-Up
-        const geo = new THREE.OctahedronGeometry(0.45);
-        const mat = new THREE.MeshStandardMaterial({ color: 0x00B4D8, emissive: 0x0077B6, roughness: 0.1 });
-        item = new THREE.Mesh(geo, mat);
-        item.userData = { type: 'shield' };
-      }
+  woodTex = new THREE.CanvasTexture(wCanvas);
 
-      item.position.set(lanesX[lane], NORMAL_Y, zPos);
-      scene.add(item);
-      items.push(item);
-    }
 
-    function setupSwipeAndKeyboardControls() {
-      let startX = 0, startY = 0;
+  /* MÜNZE */
 
-      window.addEventListener('touchstart', e => {
-        startX = e.touches[0].clientX;
-        startY = e.touches[0].clientY;
-      }, { passive: true });
+  const cCanvas = document.createElement("canvas");
 
-      window.addEventListener('touchend', e => {
-        let diffX = e.changedTouches[0].clientX - startX;
-        let diffY = e.changedTouches[0].clientY - startY;
+  cCanvas.width = 128;
+  cCanvas.height = 128;
 
-        if (Math.abs(diffX) > Math.abs(diffY)) {
-          // Horizontal Swipe
-          if (Math.abs(diffX) > 28) {
-            if (diffX > 0) moveLane(1);
-            else moveLane(-1);
-          }
-        } else {
-          // Vertical Swipe
-          if (Math.abs(diffY) > 28) {
-            if (diffY < 0) flyUpAction();
-            else duckDownAction();
-          }
-        }
-      }, { passive: true });
+  const cCtx = cCanvas.getContext("2d");
 
-      window.addEventListener('keydown', e => {
-        if (e.key === 'ArrowLeft' || e.key === 'a') moveLane(-1);
-        if (e.key === 'ArrowRight' || e.key === 'd') moveLane(1);
-        if (e.key === 'ArrowUp' || e.key === 'w') flyUpAction();
-        if (e.key === 'ArrowDown' || e.key === 's') duckDownAction();
-      });
-    }
+  cCtx.fillStyle = "#FFB703";
 
-    function moveLane(dir) {
-      if (isGameOver) return;
-      currentLane = Math.max(0, Math.min(2, currentLane + dir));
-    }
+  cCtx.beginPath();
+  cCtx.arc(64, 64, 60, 0, Math.PI * 2);
+  cCtx.fill();
 
-    function flyUpAction() {
-      if (isGameOver || flightState === 'flying_high') return;
-      flightState = 'flying_high';
-      targetY = HIGH_Y;
+  cCtx.strokeStyle = "#D48806";
+  cCtx.lineWidth = 8;
+  cCtx.stroke();
 
-      if (flightActionTimer) clearTimeout(flightActionTimer);
-      flightActionTimer = setTimeout(() => {
-        targetY = NORMAL_Y;
-        flightState = 'normal';
-      }, 850);
-    }
+  cCtx.fillStyle = "#023047";
 
-    function duckDownAction() {
-      if (isGameOver || flightState === 'ducking') return;
-      flightState = 'ducking';
-      targetY = DUCK_Y;
+  cCtx.font = "bold 65px sans-serif";
+  cCtx.textAlign = "center";
+  cCtx.textBaseline = "middle";
 
-      if (flightActionTimer) clearTimeout(flightActionTimer);
-      flightActionTimer = setTimeout(() => {
-        targetY = NORMAL_Y;
-        flightState = 'normal';
-      }, 850);
-    }
+  cCtx.fillText("🐝", 64, 64);
 
-    function animate() {
-      if (isGameOver) return;
-      requestAnimationFrame(animate);
+  coinTex = new THREE.CanvasTexture(cCanvas);
 
-      // Smooth Lane switching
-      beeGroup.position.x += (lanesX[currentLane] - beeGroup.position.x) * 0.22;
 
-      // Smooth Flight Altitude transition (Normal / Fly Up / Duck Down)
-      beeGroup.position.y += (targetY - beeGroup.position.y) * 0.18;
+  /* HONIG */
 
-      // Wing flapping and bee pitch tilt
-      const time = Date.now() * 0.009;
-      if (wings.length === 2) {
-        wings[0].rotation.z = Math.sin(time * 5) * 0.4;
-        wings[1].rotation.z = -Math.sin(time * 5) * 0.4;
-      }
-      if (flightState === 'flying_high') beeGroup.rotation.x = -0.25;
-      else if (flightState === 'ducking') beeGroup.rotation.x = 0.25;
-      else beeGroup.rotation.x = 0;
+  const pCanvas = document.createElement("canvas");
 
-      // Update distance
-      distance += gameSpeed * 0.5;
-      document.getElementById('dist').innerText = `${Math.floor(distance)}m`;
+  pCanvas.width = 128;
+  pCanvas.height = 128;
 
-      moveTrackObjects();
-      renderer.render(scene, camera);
-    }
+  const pCtx = pCanvas.getContext("2d");
 
-    function moveTrackObjects() {
-      // 1. Move Obstacles & Collision Checks
-      for (let i = obstacles.length - 1; i >= 0; i--) {
-        const obs = obstacles[i];
-        obs.position.z += gameSpeed;
+  pCtx.fillStyle = "#D4A373";
+  pCtx.fillRect(0, 0, 128, 128);
 
-        // Collision Check
-        if (Math.abs(obs.position.z - beeGroup.position.z) < 0.7 &&
-            Math.abs(obs.position.x - beeGroup.position.x) < 0.7) {
-          
-          const type = obs.userData.type;
-          let hit = true;
+  pCtx.fillStyle = "#FFB703";
 
-          if (type === 'mushroom' && flightState === 'flying_high') {
-            hit = false; // Flew over mushroom
-          } else if (type === 'branch' && flightState === 'ducking') {
-            hit = false; // Ducked under tree branch
-          }
+  pCtx.font = "bold 70px sans-serif";
+  pCtx.textAlign = "center";
+  pCtx.textBaseline = "middle";
 
-          if (hit) {
-            if (shieldActive) {
-              deactivateShield();
-              respawnObject(obs, -110);
-            } else {
-              triggerGameOver();
-              return;
-            }
-          }
-        }
+  pCtx.fillText("🍯", 64, 64);
 
-        if (obs.position.z > 5) respawnObject(obs, -110);
-      }
+  potTex = new THREE.CanvasTexture(pCanvas);
+}
 
-      // 2. Move Collectibles & Pickup Handling
-      for (let i = items.length - 1; i >= 0; i--) {
-        const item = items[i];
-        item.position.z += gameSpeed;
-        item.rotation.y += 0.04;
 
-        if (Math.abs(item.position.z - beeGroup.position.z) < 0.8 &&
-            Math.abs(item.position.x - beeGroup.position.x) < 0.8 &&
-            Math.abs(item.position.y - beeGroup.position.y) < 1.0) {
-          
-          handleItemPickup(item);
-          respawnObject(item, -110);
-        }
+/* =========================
+   BIENE
+========================= */
 
-        if (item.position.z > 5) respawnObject(item, -110);
-      }
+function createBeeModel() {
 
-      // 3. Move Scenery
-      decorObjects.forEach(obj => {
-        obj.position.z += gameSpeed;
-        if (obj.position.z > 10) obj.position.z -= 110;
-      });
-    }
+  beeGroup = new THREE.Group();
 
-    function handleItemPickup(item) {
-      const type = item.userData.type;
 
-      if (type === 'coin') {
-        score += item.userData.points;
-      } else if (type === 'pot') {
-        score += item.userData.points;
-        showFloatingText('+20P');
-      } else if (type === 'shield') {
-        activateShield();
-      }
+  const bodyGeo =
+    new THREE.SphereGeometry(0.55, 32, 32);
 
-      document.getElementById('score').innerText = score;
-    }
+  bodyGeo.scale.set(1, 0.9, 1.3);
 
-    function activateShield() {
-      shieldActive = true;
-      shieldTimeLeft = 10;
-      shieldAuraMesh.visible = true;
-
-      const barContainer = document.getElementById('shield-bar-container');
-      const barFill = document.getElementById('shield-bar-fill');
-      const timerText = document.getElementById('shield-timer-text');
-
-      barContainer.style.display = 'flex';
-      barFill.style.width = '100%';
-      timerText.innerText = '10s';
-
-      if (shieldInterval) clearInterval(shieldInterval);
-      shieldInterval = setInterval(() => {
-        shieldTimeLeft--;
-        timerText.innerText = `${shieldTimeLeft}s`;
-        barFill.style.width = `${(shieldTimeLeft / 10) * 100}%`;
-
-        if (shieldTimeLeft <= 0) {
-          deactivateShield();
-        }
-      }, 1000);
-    }
-
-    function deactivateShield() {
-      shieldActive = false;
-      shieldAuraMesh.visible = false;
-      document.getElementById('shield-bar-container').style.display = 'none';
-      if (shieldInterval) clearInterval(shieldInterval);
-    }
-
-    function showFloatingText(text) {
-      const el = document.createElement('div');
-      el.className = 'floating-text';
-      el.innerText = text;
-      el.style.left = `${window.innerWidth / 2 - 30}px`;
-      el.style.top = `${window.innerHeight / 2 - 50}px`;
-      document.body.appendChild(el);
-      setTimeout(() => el.remove(), 950);
-    }
-
-    function respawnObject(obj, zPos) {
-      obj.position.z = zPos;
-      obj.position.x = lanesX[Math.floor(Math.random() * 3)];
-    }
-
-    function triggerGameOver() {
-      isGameOver = true;
-      deactivateShield();
-      document.getElementById('final-score').innerText = score;
-      document.getElementById('final-dist').innerText = `${Math.floor(distance)}m`;
-      document.getElementById('game-over').style.display = 'flex';
-    }
-
-    function resetGame() {
-      score = 0;
-      distance = 0;
-      currentLane = 1;
-      targetY = NORMAL_Y;
-      flightState = 'normal';
-      isGameOver = false;
-
-      document.getElementById('score').innerText = '0';
-      document.getElementById('game-over').style.display = 'none';
-
-      obstacles.forEach((obs, idx) => { obs.position.z = -18 - idx * 12; });
-      items.forEach((item, idx) => { item.position.z = -22 - idx * 9; });
-
-      animate();
-    }
-
-    window.addEventListener('resize', () => {
-      camera.aspect = window.innerWidth / window.innerHeight;
-      camera.updateProjectionMatrix();
-      renderer.setSize(window.innerWidth, window.innerHeight);
+  const bodyMat =
+    new THREE.MeshStandardMaterial({
+      color: 0xFFB703,
+      roughness: 0.3
     });
 
-    window.onload = init;
-  </script>
+  const body =
+    new THREE.Mesh(bodyGeo, bodyMat);
+
+  beeGroup.add(body);
+
+
+  /* STREIFEN */
+
+  const stripeMat =
+    new THREE.MeshStandardMaterial({
+      color: 0x111111
+    });
+
+  [-0.1, 0.15, 0.4].forEach(zPos => {
+
+    const stripeGeo =
+      new THREE.CylinderGeometry(
+        0.56,
+        0.56,
+        0.16,
+        32
+      );
+
+    const stripe =
+      new THREE.Mesh(stripeGeo, stripeMat);
+
+    stripe.rotation.x = Math.PI / 2;
+
+    stripe.position.z = zPos;
+
+    beeGroup.add(stripe);
+
+  });
+
+
+  /* AUGEN */
+
+  const eyeGeo =
+    new THREE.SphereGeometry(0.12, 16, 16);
+
+  const eyeMat =
+    new THREE.MeshStandardMaterial({
+      color: 0x000000
+    });
+
+  const leftEye =
+    new THREE.Mesh(eyeGeo, eyeMat);
+
+  leftEye.position.set(
+    -0.25,
+    0.2,
+    -0.55
+  );
+
+  const rightEye =
+    new THREE.Mesh(eyeGeo, eyeMat);
+
+  rightEye.position.set(
+    0.25,
+    0.2,
+    -0.55
+  );
+
+  beeGroup.add(leftEye, rightEye);
+
+
+  /* FLÜGEL */
+
+  const wingGeo =
+    new THREE.PlaneGeometry(
+      0.75,
+      0.38
+    );
+
+  const wingMat =
+    new THREE.MeshStandardMaterial({
+      color: 0xE0F7FA,
+      transparent: true,
+      opacity: 0.8,
+      side: THREE.DoubleSide
+    });
+
+  const leftWing =
+    new THREE.Mesh(wingGeo, wingMat);
+
+  leftWing.position.set(
+    -0.45,
+    0.35,
+    0
+  );
+
+  const rightWing =
+    new THREE.Mesh(wingGeo, wingMat);
+
+  rightWing.position.set(
+    0.45,
+    0.35,
+    0
+  );
+
+  beeGroup.add(leftWing, rightWing);
+
+  wings = [leftWing, rightWing];
+
+
+  /* SCHILD */
+
+  const shieldGeo =
+    new THREE.SphereGeometry(
+      0.9,
+      32,
+      32
+    );
+
+  const shieldMat =
+    new THREE.MeshStandardMaterial({
+      color: 0x00B4D8,
+      transparent: true,
+      opacity: 0.45,
+      emissive: 0x0077B6
+    });
+
+  shieldAuraMesh =
+    new THREE.Mesh(
+      shieldGeo,
+      shieldMat
+    );
+
+  shieldAuraMesh.visible = false;
+
+  beeGroup.add(shieldAuraMesh);
+
+
+  beeGroup.position.set(
+    lanesX[currentLane],
+    NORMAL_Y,
+    0
+  );
+
+  scene.add(beeGroup);
+}
+
+
+/* =========================
+   SPIEL STARTEN
+========================= */
+
+function init() {
+
+  try {
+
+    if (typeof THREE === "undefined") {
+
+      throw new Error(
+        "Three.js konnte nicht geladen werden."
+      );
+
+    }
+
+    createProceduralTextures();
+
+    scene = new THREE.Scene();
+
+    scene.background =
+      new THREE.Color(0x87CEEB);
+
+    scene.fog =
+      new THREE.FogExp2(
+        0x87CEEB,
+        0.018
+      );
+
+
+    camera =
+      new THREE.PerspectiveCamera(
+        65,
+        window.innerWidth /
+        window.innerHeight,
+        0.1,
+        120
+      );
+
+    camera.position.set(
+      0,
+      4.2,
+      5.5
+    );
+
+    camera.lookAt(
+      0,
+      1.2,
+      -4
+    );
+
+
+    renderer =
+      new THREE.WebGLRenderer({
+        antialias: true
+      });
+
+    renderer.setSize(
+      window.innerWidth,
+      window.innerHeight
+    );
+
+    renderer.setPixelRatio(
+      Math.min(
+        window.devicePixelRatio || 1,
+        2
+      )
+    );
+
+
+    document
+      .getElementById("game-container")
+      .appendChild(renderer.domElement);
+
+
+    /* LICHT */
+
+    const ambientLight =
+      new THREE.AmbientLight(
+        0xFFFFFF,
+        0.85
+      );
+
+    scene.add(ambientLight);
+
+
+    const dirLight =
+      new THREE.DirectionalLight(
+        0xFFF3B0,
+        1.2
+      );
+
+    dirLight.position.set(
+      10,
+      20,
+      10
+    );
+
+    scene.add(dirLight);
+
+
+    /* BODEN */
+
+    const trackGeo =
+      new THREE.PlaneGeometry(
+        7.2,
+        120
+      );
+
+    const trackMat =
+      new THREE.MeshStandardMaterial({
+        map: honeycombTex,
+        roughness: 0.4
+      });
+
+    const track =
+      new THREE.Mesh(
+        trackGeo,
+        trackMat
+      );
+
+    track.rotation.x =
+      -Math.PI / 2;
+
+    track.position.z = -50;
+
+    scene.add(track);
+
+
+    /* SEITEN */
+
+    [-3.6, 3.6].forEach(xPos => {
+
+      const railGeo =
+        new THREE.BoxGeometry(
+          0.3,
+          0.5,
+          120
+        );
+
+      const railMat =
+        new THREE.MeshStandardMaterial({
+          map: woodTex
+        });
+
+      const rail =
+        new THREE.Mesh(
+          railGeo,
+          railMat
+        );
+
+      rail.position.set(
+        xPos,
+        0.25,
+        -50
+      );
+
+      scene.add(rail);
+
+    });
+
+
+    createBeeModel();
+
+    buildEnvironmentDecoration();
+
+    spawnInitialGameObjects();
+
+    setupControls();
+
+
+    document.getElementById(
+      "loading"
+    ).style.display = "none";
+
+
+    animate();
+
+  } catch (error) {
+
+    console.error(error);
+
+    document.getElementById(
+      "loading"
+    ).innerHTML =
+      "❌ Spiel konnte nicht geladen werden.<br><small>" +
+      error.message +
+      "</small>";
+
+  }
+
+}
+
+
+/* =========================
+   UMGEBUNG
+========================= */
+
+function buildEnvironmentDecoration() {
+
+  [-15, 15].forEach(xPos => {
+
+    const grass =
+      new THREE.Mesh(
+        new THREE.PlaneGeometry(
+          18,
+          120
+        ),
+        new THREE.MeshStandardMaterial({
+          color: 0x70E000
+        })
+      );
+
+    grass.rotation.x =
+      -Math.PI / 2;
+
+    grass.position.set(
+      xPos,
+      -0.05,
+      -50
+    );
+
+    scene.add(grass);
+
+  });
+
+
+  for (
+    let z = -10;
+    z > -110;
+    z -= 14
+  ) {
+
+    [-8, 8].forEach(xPos => {
+
+      const treeGroup =
+        new THREE.Group();
+
+
+      const trunk =
+        new THREE.Mesh(
+          new THREE.CylinderGeometry(
+            0.3,
+            0.4,
+            2
+          ),
+          new THREE.MeshStandardMaterial({
+            color: 0x8B4513
+          })
+        );
+
+      trunk.position.y = 1;
+
+
+      const leaves =
+        new THREE.Mesh(
+          new THREE.DodecahedronGeometry(1.4),
+          new THREE.MeshStandardMaterial({
+            color: 0x38B000
+          })
+        );
+
+      leaves.position.y = 2.4;
+
+
+      treeGroup.add(
+        trunk,
+        leaves
+      );
+
+
+      treeGroup.position.set(
+        xPos +
+        (Math.random() * 2 - 1),
+        0,
+        z
+      );
+
+
+      scene.add(treeGroup);
+
+      decorObjects.push(
+        treeGroup
+      );
+
+    });
+
+  }
+
+}
+
+
+/* =========================
+   OBJEKTE
+========================= */
+
+function spawnInitialGameObjects() {
+
+  for (
+    let z = -18;
+    z > -110;
+    z -= 9
+  ) {
+
+    if (Math.random() < 0.48) {
+      spawnObstacle(z);
+    } else {
+      spawnCollectible(z);
+    }
+
+  }
+
+}
+
+
+function spawnObstacle(zPos) {
+
+  const lane =
+    Math.floor(Math.random() * 3);
+
+  const randType =
+    Math.random();
+
+  const obsGroup =
+    new THREE.Group();
+
+  let type;
+
+
+  if (randType < 0.35) {
+
+    type = "mushroom";
+
+
+    const stem =
+      new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          0.3,
+          0.4,
+          0.6,
+          12
+        ),
+        new THREE.MeshStandardMaterial({
+          color: 0xFFF8DC
+        })
+      );
+
+    stem.position.y = 0.3;
+
+
+    const cap =
+      new THREE.Mesh(
+        new THREE.SphereGeometry(
+          0.7,
+          16,
+          12,
+          0,
+          Math.PI * 2,
+          0,
+          Math.PI / 2
+        ),
+        new THREE.MeshStandardMaterial({
+          color: 0xE63946
+        })
+      );
+
+    cap.position.y = 0.6;
+
+    obsGroup.add(
+      stem,
+      cap
+    );
+
+  } else if (randType < 0.70) {
+
+    type = "branch";
+
+
+    const post1 =
+      new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          0.1,
+          0.1,
+          3,
+          8
+        ),
+        new THREE.MeshStandardMaterial({
+          map: woodTex
+        })
+      );
+
+    post1.position.set(
+      -0.8,
+      1.5,
+      0
+    );
+
+
+    const post2 =
+      post1.clone();
+
+    post2.position.x = 0.8;
+
+
+    const branch =
+      new THREE.Mesh(
+        new THREE.CylinderGeometry(
+          0.2,
+          0.22,
+          1.8,
+          8
+        ),
+        new THREE.MeshStandardMaterial({
+          color: 0x5C4033
+        })
+      );
+
+    branch.rotation.z =
+      Math.PI / 2;
+
+    branch.position.set(
+      0,
+      2,
+      0
+    );
+
+
+    obsGroup.add(
+      post1,
+      post2,
+      branch
+    );
+
+  } else {
+
+    type = "spiderweb";
+
+
+    const webRing =
+      new THREE.Mesh(
+        new THREE.TorusGeometry(
+          0.95,
+          0.05,
+          8,
+          24
+        ),
+        new THREE.MeshBasicMaterial({
+          color: 0xFFFFFF
+        })
+      );
+
+    webRing.position.y = 1.3;
+
+
+    const centerDot =
+      new THREE.Mesh(
+        new THREE.SphereGeometry(
+          0.15,
+          8,
+          8
+        ),
+        new THREE.MeshBasicMaterial({
+          color: 0x111111
+        })
+      );
+
+    centerDot.position.y = 1.3;
+
+
+    obsGroup.add(
+      webRing,
+      centerDot
+    );
+
+  }
+
+
+  obsGroup.userData = {
+    type: type
+  };
+
+
+  obsGroup.position.set(
+    lanesX[lane],
+    0,
+    zPos
+  );
+
+
+  scene.add(obsGroup);
+
+  obstacles.push(obsGroup);
+
+}
+
+
+function spawnCollectible(zPos) {
+
+  const lane =
+    Math.floor(Math.random() * 3);
+
+  const rand =
+    Math.random();
+
+  let item;
+
+
+  if (rand < 0.60) {
+
+    const geo =
+      new THREE.CylinderGeometry(
+        0.4,
+        0.4,
+        0.1,
+        24
+      );
+
+    const mat =
+      new THREE.MeshStandardMaterial({
+        map: coinTex
+      });
+
+    item =
+      new THREE.Mesh(
+        geo,
+        mat
+      );
+
+    item.rotation.x =
+      Math.PI / 2;
+
+    item.userData = {
+      type: "coin",
+      points: 10
+    };
+
+
+  } else if (rand < 0.85) {
+
+    const geo =
+      new THREE.CylinderGeometry(
+        0.42,
+        0.35,
+        0.7,
+        16
+      );
+
+    const mat =
+      new THREE.MeshStandardMaterial({
+        map: potTex
+      });
+
+    item =
+      new THREE.Mesh(
+        geo,
+        mat
+      );
+
+    item.userData = {
+      type: "pot",
+      points: 20
+    };
+
+
+  } else {
+
+    const geo =
+      new THREE.OctahedronGeometry(
+        0.45
+      );
+
+    const mat =
+      new THREE.MeshStandardMaterial({
+        color: 0x00B4D8,
+        emissive: 0x0077B6
+      });
+
+    item =
+      new THREE.Mesh(
+        geo,
+        mat
+      );
+
+    item.userData = {
+      type: "shield"
+    };
+
+  }
+
+
+  item.position.set(
+    lanesX[lane],
+    NORMAL_Y,
+    zPos
+  );
+
+  scene.add(item);
+
+  items.push(item);
+
+}
+
+
+/* =========================
+   STEUERUNG
+========================= */
+
+function setupControls() {
+
+  let startX = 0;
+  let startY = 0;
+
+
+  window.addEventListener(
+    "touchstart",
+    function(e) {
+
+      startX =
+        e.touches[0].clientX;
+
+      startY =
+        e.touches[0].clientY;
+
+    },
+    { passive: true }
+  );
+
+
+  window.addEventListener(
+    "touchend",
+    function(e) {
+
+      const diffX =
+        e.changedTouches[0].clientX -
+        startX;
+
+      const diffY =
+        e.changedTouches[0].clientY -
+        startY;
+
+
+      if (
+        Math.abs(diffX) >
+        Math.abs(diffY)
+      ) {
+
+        if (Math.abs(diffX) > 28) {
+
+          if (diffX > 0) {
+            moveLane(1);
+          } else {
+            moveLane(-1);
+          }
+
+        }
+
+      } else {
+
+        if (Math.abs(diffY) > 28) {
+
+          if (diffY < 0) {
+            flyUpAction();
+          } else {
+            duckDownAction();
+          }
+
+        }
+
+      }
+
+    },
+    { passive: true }
+  );
+
+
+  window.addEventListener(
+    "keydown",
+    function(e) {
+
+      if (
+        e.key === "ArrowLeft" ||
+        e.key === "a"
+      ) {
+        moveLane(-1);
+      }
+
+      if (
+        e.key === "ArrowRight" ||
+        e.key === "d"
+      ) {
+        moveLane(1);
+      }
+
+      if (
+        e.key === "ArrowUp" ||
+        e.key === "w"
+      ) {
+        flyUpAction();
+      }
+
+      if (
+        e.key === "ArrowDown" ||
+        e.key === "s"
+      ) {
+        duckDownAction();
+      }
+
+    }
+  );
+
+}
+
+
+/* =========================
+   SPIELSTEUERUNG
+========================= */
+
+function moveLane(dir) {
+
+  if (isGameOver) return;
+
+  currentLane =
+    Math.max(
+      0,
+      Math.min(
+        2,
+        currentLane + dir
+      )
+    );
+
+}
+
+
+function flyUpAction() {
+
+  if (
+    isGameOver ||
+    flightState === "flying_high"
+  ) return;
+
+  flightState =
+    "flying_high";
+
+  targetY = HIGH_Y;
+
+
+  if (flightActionTimer) {
+    clearTimeout(
+      flightActionTimer
+    );
+  }
+
+
+  flightActionTimer =
+    setTimeout(
+      function() {
+
+        targetY = NORMAL_Y;
+        flightState = "normal";
+
+      },
+      850
+    );
+
+}
+
+
+function duckDownAction() {
+
+  if (
+    isGameOver ||
+    flightState === "ducking"
+  ) return;
+
+  flightState =
+    "ducking";
+
+  targetY = DUCK_Y;
+
+
+  if (flightActionTimer) {
+    clearTimeout(
+      flightActionTimer
+    );
+  }
+
+
+  flightActionTimer =
+    setTimeout(
+      function() {
+
+        targetY = NORMAL_Y;
+        flightState = "normal";
+
+      },
+      850
+    );
+
+}
+
+
+/* =========================
+   ANIMATION
+========================= */
+
+function animate() {
+
+  if (isGameOver) return;
+
+  requestAnimationFrame(
+    animate
+  );
+
+
+  beeGroup.position.x +=
+    (
+      lanesX[currentLane] -
+      beeGroup.position.x
+    ) * 0.22;
+
+
+  beeGroup.position.y +=
+    (
+      targetY -
+      beeGroup.position.y
+    ) * 0.18;
+
+
+  const time =
+    Date.now() * 0.009;
+
+
+  if (wings.length === 2) {
+
+    wings[0].rotation.z =
+      Math.sin(time * 5) * 0.4;
+
+    wings[1].rotation.z =
+      -Math.sin(time * 5) * 0.4;
+
+  }
+
+
+  if (
+    flightState ===
+    "flying_high"
+  ) {
+
+    beeGroup.rotation.x =
+      -0.25;
+
+  } else if (
+    flightState === "ducking"
+  ) {
+
+    beeGroup.rotation.x =
+      0.25;
+
+  } else {
+
+    beeGroup.rotation.x =
+      0;
+
+  }
+
+
+  distance +=
+    gameSpeed * 0.5;
+
+
+  document.getElementById(
+    "dist"
+  ).innerText =
+    Math.floor(distance) + "m";
+
+
+  moveTrackObjects();
+
+
+  renderer.render(
+    scene,
+    camera
+  );
+
+}
+
+
+/* =========================
+   OBJEKTE BEWEGEN
+========================= */
+
+function moveTrackObjects() {
+
+  for (
+    let i = obstacles.length - 1;
+    i >= 0;
+    i--
+  ) {
+
+    const obs =
+      obstacles[i];
+
+    obs.position.z +=
+      gameSpeed;
+
+
+    if (
+      Math.abs(
+        obs.position.z -
+        beeGroup.position.z
+      ) < 0.7 &&
+
+      Math.abs(
+        obs.position.x -
+        beeGroup.position.x
+      ) < 0.7
+    ) {
+
+      const type =
+        obs.userData.type;
+
+      let hit = true;
+
+
+      if (
+        type === "mushroom" &&
+        flightState === "flying_high"
+      ) {
+
+        hit = false;
+
+      } else if (
+        type === "branch" &&
+        flightState === "ducking"
+      ) {
+
+        hit = false;
+
+      }
+
+
+      if (hit) {
+
+        if (shieldActive) {
+
+          deactivateShield();
+
+          respawnObject(
+            obs,
+            -110
+          );
+
+        } else {
+
+          triggerGameOver();
+
+          return;
+
+        }
+
+      }
+
+    }
+
+
+    if (obs.position.z > 5) {
+
+      respawnObject(
+        obs,
+        -110
+      );
+
+    }
+
+  }
+
+
+  for (
+    let i = items.length - 1;
+    i >= 0;
+    i--
+  ) {
+
+    const item =
+      items[i];
+
+    item.position.z +=
+      gameSpeed;
+
+    item.rotation.y +=
+      0.04;
+
+
+    if (
+      Math.abs(
+        item.position.z -
+        beeGroup.position.z
+      ) < 0.8 &&
+
+      Math.abs(
+        item.position.x -
+        beeGroup.position.x
+      ) < 0.8 &&
+
+      Math.abs(
+        item.position.y -
+        beeGroup.position.y
+      ) < 1.0
+    ) {
+
+      handleItemPickup(item);
+
+      respawnObject(
+        item,
+        -110
+      );
+
+    }
+
+
+    if (item.position.z > 5) {
+
+      respawnObject(
+        item,
+        -110
+      );
+
+    }
+
+  }
+
+
+  decorObjects.forEach(
+    function(obj) {
+
+      obj.position.z +=
+        gameSpeed;
+
+      if (obj.position.z > 10) {
+
+        obj.position.z -=
+          110;
+
+      }
+
+    }
+  );
+
+}
+
+
+/* =========================
+   ITEMS
+========================= */
+
+function handleItemPickup(item) {
+
+  const type =
+    item.userData.type;
+
+
+  if (type === "coin") {
+
+    score +=
+      item.userData.points;
+
+  }
+
+
+  if (type === "pot") {
+
+    score +=
+      item.userData.points;
+
+    showFloatingText(
+      "+20P"
+    );
+
+  }
+
+
+  if (type === "shield") {
+
+    activateShield();
+
+  }
+
+
+  document.getElementById(
+    "score"
+  ).innerText =
+    score;
+
+}
+
+
+function activateShield() {
+
+  shieldActive = true;
+
+  shieldTimeLeft = 10;
+
+  shieldAuraMesh.visible = true;
+
+
+  const container =
+    document.getElementById(
+      "shield-bar-container"
+    );
+
+  const fill =
+    document.getElementById(
+      "shield-bar-fill"
+    );
+
+  const text =
+    document.getElementById(
+      "shield-timer-text"
+    );
+
+
+  container.style.display =
+    "flex";
+
+  fill.style.width =
+    "100%";
+
+  text.innerText =
+    "10s";
+
+
+  if (shieldInterval) {
+
+    clearInterval(
+      shieldInterval
+    );
+
+  }
+
+
+  shieldInterval =
+    setInterval(
+      function() {
+
+        shieldTimeLeft--;
+
+        text.innerText =
+          shieldTimeLeft + "s";
+
+        fill.style.width =
+          (
+            shieldTimeLeft /
+            10 *
+            100
+          ) + "%";
+
+
+        if (
+          shieldTimeLeft <= 0
+        ) {
+
+          deactivateShield();
+
+        }
+
+      },
+      1000
+    );
+
+}
+
+
+function deactivateShield() {
+
+  shieldActive = false;
+
+  if (shieldAuraMesh) {
+    shieldAuraMesh.visible = false;
+  }
+
+
+  document.getElementById(
+    "shield-bar-container"
+  ).style.display =
+    "none";
+
+
+  if (shieldInterval) {
+
+    clearInterval(
+      shieldInterval
+    );
+
+    shieldInterval = null;
+
+  }
+
+}
+
+
+function showFloatingText(text) {
+
+  const el =
+    document.createElement(
+      "div"
+    );
+
+  el.className =
+    "floating-text";
+
+  el.innerText =
+    text;
+
+  el.style.left =
+    (
+      window.innerWidth / 2 - 30
+    ) + "px";
+
+  el.style.top =
+    (
+      window.innerHeight / 2 - 50
+    ) + "px";
+
+
+  document.body.appendChild(
+    el
+  );
+
+
+  setTimeout(
+    function() {
+      el.remove();
+    },
+    950
+  );
+
+}
+
+
+/* =========================
+   GAME OVER
+========================= */
+
+function triggerGameOver() {
+
+  isGameOver = true;
+
+  deactivateShield();
+
+
+  document.getElementById(
+    "final-score"
+  ).innerText =
+    score;
+
+
+  document.getElementById(
+    "final-dist"
+  ).innerText =
+    Math.floor(distance) + "m";
+
+
+  document.getElementById(
+    "game-over"
+  ).style.display =
+    "flex";
+
+}
+
+
+function resetGame() {
+
+  score = 0;
+  distance = 0;
+
+  currentLane = 1;
+
+  targetY = NORMAL_Y;
+
+  flightState = "normal";
+
+  isGameOver = false;
+
+
+  document.getElementById(
+    "score"
+  ).innerText =
+    "0";
+
+
+  document.getElementById(
+    "dist"
+  ).innerText =
+    "0m";
+
+
+  document.getElementById(
+    "game-over"
+  ).style.display =
+    "none";
+
+
+  obstacles.forEach(
+    function(obs, idx) {
+
+      obs.position.z =
+        -18 - idx * 12;
+
+    }
+  );
+
+
+  items.forEach(
+    function(item, idx) {
+
+      item.position.z =
+        -22 - idx * 9;
+
+    }
+  );
+
+
+  animate();
+
+}
+
+
+/* =========================
+   BUTTON
+========================= */
+
+document.getElementById(
+  "restart-btn"
+).addEventListener(
+  "click",
+  resetGame
+);
+
+
+/* =========================
+   RESIZE
+========================= */
+
+window.addEventListener(
+  "resize",
+  function() {
+
+    if (!camera || !renderer)
+      return;
+
+
+    camera.aspect =
+      window.innerWidth /
+      window.innerHeight;
+
+
+    camera.updateProjectionMatrix();
+
+
+    renderer.setSize(
+      window.innerWidth,
+      window.innerHeight
+    );
+
+  }
+);
+
+
+/* =========================
+   START
+========================= */
+
+window.addEventListener(
+  "load",
+  init
+);
+
+</script>
+
 </body>
 </html>
