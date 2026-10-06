@@ -1,109 +1,987 @@
 <!DOCTYPE html>
 <html lang="de">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-  <title>Bee Runner 3D</title>
-  
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="Bee Runner">
-  
-  <style>
-    * {
-      box-sizing: border-box;
-      user-select: none;
-      -webkit-user-select: none;
-      margin: 0;
-      padding: 0;
-    }
-    body, html {
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
-      background-color: #87CEEB;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    }
-    #game-container {
-      width: 100%;
-      height: 100%;
-      position: absolute;
-      top: 0;
-      left: 0;
-    }
-    #ui-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      padding: 20px;
-      padding-top: calc(20px + env(safe-area-inset-top));
-      padding-bottom: calc(20px + env(safe-area-inset-bottom));
-      z-index: 10;
-    }
-    .top-bar {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      width: 100%;
-    }
-    .score-container {
-      background: rgba(0, 0, 0, 0.4);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
-      padding: 10px 20px;
-      border-radius: 20px;
-      color: #FFF;
-      font-weight: 800;
-      font-size: 24px;
-      border: 2px solid rgba(255, 255, 255, 0.2);
-    }
-    #shield-ui {
-      display: none;
-      align-items: center;
-      background: rgba(0, 0, 0, 0.5);
-      backdrop-filter: blur(8px);
-      padding: 8px 15px;
-      border-radius: 20px;
-      border: 2px solid #00d2ff;
-    }
-    .shield-bar-bg {
-      width: 100px;
-      height: 12px;
-      background: rgba(255, 255, 255, 0.2);
-      border-radius: 6px;
-      overflow: hidden;
-      margin-right: 10px;
-    }
-    #shield-bar-fill {
-      width: 100%;
-      height: 100%;
-      background: linear-gradient(90deg, #00d2ff, #0072ff);
-      border-radius: 6px;
-    }
-    #shield-text {
-      color: #00d2ff;
-      font-weight: 800;
-      font-size: 16px;
-      min-width: 35px;
-    }
-    .floating-text {
-      position: absolute;
-      color: #FFD700;
-      font-size: 32px;
-      font-weight: 900;
-      text-shadow: 2px 2px 4px rgba(0,0,0,0.8);
-      pointer-events: none;
-      animation: floatUp 1s ease-out forwards;
-      z-index: 20;
-    }
-    @keyframes floatUp {
-      0% { opacity: 1; transform: translate(-50%, -50%) scale(0.8); }
-      50% { transform: translate(-50%, -100%) scale(1.3); }
-      100% { opacity: 0; transform: translate(-50%, -150%) scale(1); }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Cyber Wurm Spiel</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@500;700&display=swap" rel="stylesheet">
     
+    <style>
+        * {
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        body {
+            margin: 0;
+            overflow: hidden;
+            background-color: #030712;
+            font-family: 'Rajdhani', sans-serif;
+            color: #ffffff;
+        }
+        .font-orbitron {
+            font-family: 'Orbitron', sans-serif;
+        }
+        .cyber-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(12px);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.15), inset 0 0 15px rgba(0, 240, 255, 0.05);
+        }
+        .cyber-button {
+            background: linear-gradient(135deg, #00f0ff 0%, #7000ff 100%);
+            transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            box-shadow: 0 0 15px rgba(0, 240, 255, 0.4);
+        }
+        .cyber-button:hover {
+            transform: translateY(-2px) scale(1.02);
+            box-shadow: 0 0 25px rgba(0, 240, 255, 0.8), 0 0 40px rgba(112, 0, 255, 0.6);
+        }
+        .cyber-button:active {
+            transform: translateY(1px) scale(0.98);
+        }
+        .skin-option {
+            transition: all 0.2s ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .skin-option.active {
+            border-color: #00f0ff;
+            box-shadow: 0 0 15px #00f0ff;
+            transform: scale(1.1);
+        }
+        /* Custom Glowing Pulse Animations */
+        @keyframes pulse-glow {
+            0%, 100% { opacity: 0.8; filter: drop-shadow(0 0 8px #00f0ff); }
+            50% { opacity: 1; filter: drop-shadow(0 0 18px #00f0ff); }
+        }
+        .glow-title {
+            animation: pulse-glow 3s infinite ease-in-out;
+        }
+        canvas {
+            display: block;
+            width: 100vw;
+            height: 100vh;
+        }
+    </style>
+</head>
+<body class="bg-gray-950 text-white overflow-hidden">
+
+    <div id="canvas-container" class="absolute inset-0 z-0"></div>
+
+    <div id="ui-overlay" class="relative z-10 w-full h-screen pointer-events-none flex flex-col justify-between p-4 md:p-6">
+        
+        <!-- START MENU SCREEN -->
+        <div id="start-screen" class="pointer-events-auto absolute inset-0 flex items-center justify-center bg-black/80 backdrop-blur-md z-50 p-4">
+            <div class="cyber-panel max-w-md w-full p-6 md:p-8 rounded-2xl text-center border border-cyan-500/40 relative overflow-hidden">
+                <div class="absolute -top-24 -left-24 w-48 h-48 bg-cyan-500/20 rounded-full blur-3xl pointer-events-none"></div>
+                <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-purple-500/20 rounded-full blur-3xl pointer-events-none"></div>
+
+                <h1 class="font-orbitron text-4xl md:text-5xl font-extrabold tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-cyan-400 via-fuchsia-500 to-purple-500 glow-title mb-2">
+                    CYBER WURM 3D
+                </h1>
+                <p class="text-cyan-300/80 text-sm tracking-widest uppercase mb-6">Neongeladene 3D Slither Arena</p>
+
+                <!-- Player Name Input -->
+                <div class="mb-5 text-left">
+                    <label class="block text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-2">Spieler Name</label>
+                    <input type="text" id="nickname-input" maxlength="14" value="CyberRider" 
+                        class="w-full bg-slate-900/90 border border-cyan-500/40 rounded-xl px-4 py-3 text-white font-semibold focus:outline-none focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 transition">
+                </div>
+
+                <!-- Skin Selector -->
+                <div class="mb-6 text-left">
+                    <label class="block text-xs font-semibold text-cyan-400 uppercase tracking-wider mb-2">Wurm Skin Wählen</label>
+                    <div class="grid grid-cols-6 gap-2" id="skin-selector">
+                        <div class="skin-option active h-10 rounded-lg bg-gradient-to-r from-pink-500 to-rose-500" data-skin="neonPink"></div>
+                        <div class="skin-option h-10 rounded-lg bg-gradient-to-r from-cyan-400 to-blue-600" data-skin="cyberBlue"></div>
+                        <div class="skin-option h-10 rounded-lg bg-gradient-to-r from-lime-400 to-emerald-600" data-skin="acidGreen"></div>
+                        <div class="skin-option h-10 rounded-lg bg-gradient-to-r from-amber-400 to-red-600" data-skin="flameRed"></div>
+                        <div class="skin-option h-10 rounded-lg bg-gradient-to-r from-yellow-300 to-amber-500" data-skin="gold"></div>
+                        <div class="skin-option h-10 rounded-lg bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500" data-skin="rainbow"></div>
+                    </div>
+                </div>
+
+                <!-- Start Button -->
+                <button id="start-btn" class="cyber-button w-full py-4 rounded-xl font-orbitron font-extrabold text-lg tracking-widest text-white uppercase mb-4">
+                    SPIEL STARTEN
+                </button>
+
+                <!-- Highscore Display -->
+                <div class="flex justify-between items-center bg-slate-900/60 rounded-xl p-3 border border-slate-800 text-xs">
+                    <span class="text-slate-400 uppercase tracking-wider">Persönlicher Rekord:</span>
+                    <span id="menu-highscore" class="font-orbitron font-bold text-cyan-400 text-base">0</span>
+                </div>
+            </div>
+        </div>
+
+        <div id="hud" class="hidden pointer-events-none w-full h-full flex flex-col justify-between">
+            <!-- Top Bar -->
+            <div class="flex justify-between items-start">
+                <!-- Stats Box -->
+                <div class="cyber-panel p-4 rounded-2xl flex flex-col space-y-1 min-w-[160px]">
+                    <div class="text-xs text-slate-400 uppercase tracking-wider">PUNKTE</div>
+                    <div id="hud-score" class="font-orbitron text-2xl font-black text-cyan-400">0</div>
+                    <div class="flex justify-between text-xs text-slate-300 pt-1 border-t border-slate-700/50">
+                        <span>Länge: <b id="hud-length" class="text-fuchsia-400">10m</b></span>
+                        <span>Kills: <b id="hud-kills" class="text-emerald-400">0</b></span>
+                    </div>
+                </div>
+
+                <!-- Leaderboard (Bestenliste) -->
+                <div class="cyber-panel p-4 rounded-2xl w-52 md:w-60">
+                    <h3 class="font-orbitron text-xs font-extrabold text-cyan-400 uppercase tracking-wider mb-2 border-b border-cyan-500/30 pb-1">
+                        🏆 BESTENLISTE
+                    </h3>
+                    <ul id="leaderboard-list" class="space-y-1 text-xs">
+                        <!-- Populated dynamically -->
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Bottom Bar -->
+            <div class="flex justify-between items-end">
+                <!-- Booster Energy Gauge & Controls info -->
+                <div class="cyber-panel p-4 rounded-2xl w-64">
+                    <div class="flex justify-between text-xs font-semibold text-cyan-400 mb-1">
+                        <span>BOOSTER ENGINE</span>
+                        <span id="boost-status">BEREIT</span>
+                    </div>
+                    <div class="w-full bg-slate-800 rounded-full h-3 overflow-hidden border border-cyan-500/30 p-0.5">
+                        <div id="boost-bar" class="bg-gradient-to-r from-cyan-400 to-fuchsia-500 h-full rounded-full w-full transition-all duration-75"></div>
+                    </div>
+                    <p class="text-[10px] text-slate-400 mt-2 text-center">
+                        Maus/A-D zum Lenken • [LEERTASTE] / Linksklick für Boost
+                    </p>
+                </div>
+
+                <!-- Mini-Map Canvas Radar -->
+                <div class="cyber-panel p-2 rounded-2xl relative overflow-hidden">
+                    <div class="text-[10px] font-orbitron font-bold text-cyan-400 text-center mb-1 uppercase tracking-wider">Mini-Map</div>
+                    <canvas id="minimap" width="130" height="130" class="rounded-xl bg-slate-950/90 border border-cyan-500/30"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div id="gameover-screen" class="hidden pointer-events-auto absolute inset-0 flex items-center justify-center bg-black/85 backdrop-blur-md z-50 p-4">
+            <div class="cyber-panel max-w-md w-full p-8 rounded-2xl text-center border border-red-500/50 relative">
+                <div class="text-red-500 font-orbitron font-black text-4xl md:text-5xl tracking-widest mb-2 animate-bounce">
+                    GAME OVER
+                </div>
+                <p class="text-slate-400 text-sm mb-6">Dein Wurm wurde in die Einzelteile zerlegt!</p>
+
+                <div class="bg-slate-900/80 rounded-xl p-4 border border-slate-800 space-y-3 mb-6 text-sm">
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Endpunkte:</span>
+                        <span id="go-score" class="font-orbitron font-bold text-cyan-400 text-lg">0</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Max. Länge:</span>
+                        <span id="go-length" class="font-orbitron font-bold text-fuchsia-400 text-lg">0m</span>
+                    </div>
+                    <div class="flex justify-between items-center">
+                        <span class="text-slate-400">Eliminierte Würmer:</span>
+                        <span id="go-kills" class="font-orbitron font-bold text-emerald-400 text-lg">0</span>
+                    </div>
+                    <div class="flex justify-between items-center pt-2 border-t border-slate-800">
+                        <span class="text-slate-400">Highscore:</span>
+                        <span id="go-highscore" class="font-orbitron font-bold text-yellow-400 text-lg">0</span>
+                    </div>
+                </div>
+
+                <button id="restart-btn" class="cyber-button w-full py-4 rounded-xl font-orbitron font-extrabold text-lg tracking-widest text-white uppercase">
+                    ERNEUT SPIELEN
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <script>
+        // Game Constants
+        const ARENA_RADIUS = 280;
+        const INITIAL_FOOD_COUNT = 350;
+        const AI_COUNT = 8;
+        const BASE_SPEED = 28;
+        const BOOST_SPEED = 54;
+        const SEGMENT_SPACING = 1.35;
+
+        // Skins definition
+        const SKINS = {
+            neonPink: { name: "Neon Pink", main: 0xff007f, accent: 0xff66cc },
+            cyberBlue: { name: "Cyber Blue", main: 0x00f0ff, accent: 0x0066ff },
+            acidGreen: { name: "Acid Green", main: 0x39ff14, accent: 0x00ff66 },
+            flameRed: { name: "Flame Red", main: 0xff3300, accent: 0xff9900 },
+            gold: { name: "Gold", main: 0xffd700, accent: 0xffffff },
+            rainbow: { name: "Rainbow", main: 0xaa00ff, accent: 0x00f0ff, isRainbow: true }
+        };
+
+        let selectedSkinKey = 'neonPink';
+        let scene, camera, renderer;
+        let playerSnake = null;
+        let aiSnakes = [];
+        let foods = [];
+        let boostParticles = [];
+        let ambientLight, dirLight, headPointLight;
+        let clock = new THREE.Clock();
+        let isGameRunning = false;
+
+        // Input state
+        const mouse = { x: 0, y: 0, isDown: false };
+        const keys = { a: false, d: false, space: false };
+        let mouseWorldAngle = 0;
+
+        function initEngine() {
+            const container = document.getElementById('canvas-container');
+
+            // Scene setup
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x030712);
+            scene.fog = new THREE.FogExp2(0x030712, 0.0025);
+
+            // Camera setup
+            camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1500);
+            camera.position.set(0, 70, 90);
+
+            // Renderer setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            container.appendChild(renderer.domElement);
+
+            // Lighting setup
+            ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
+
+            dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            dirLight.position.set(100, 200, 100);
+            dirLight.castShadow = true;
+            dirLight.shadow.mapSize.width = 2048;
+            dirLight.shadow.mapSize.height = 2048;
+            dirLight.shadow.camera.near = 10;
+            dirLight.shadow.camera.far = 500;
+            const d = 250;
+            dirLight.shadow.camera.left = -d;
+            dirLight.shadow.camera.right = d;
+            dirLight.shadow.camera.top = d;
+            dirLight.shadow.camera.bottom = -d;
+            scene.add(dirLight);
+
+            headPointLight = new THREE.PointLight(0x00f0ff, 2, 40);
+            scene.add(headPointLight);
+
+            createArena();
+            createStarfield();
+
+            window.addEventListener('resize', onWindowResize);
+            setupInputListeners();
+            updateHighscoreDisplays();
+        }
+
+        function createArena() {
+            // Floor Grid
+            const gridGeo = new THREE.PlaneGeometry(ARENA_RADIUS * 2.2, ARENA_RADIUS * 2.2, 60, 60);
+            const gridMat = new THREE.MeshStandardMaterial({
+                color: 0x090d16,
+                roughness: 0.8,
+                metalness: 0.2,
+                wireframe: false
+            });
+            const floor = new THREE.Mesh(gridGeo, gridMat);
+            floor.rotation.x = -Math.PI / 2;
+            floor.receiveShadow = true;
+            scene.add(floor);
+
+            // Wireframe Grid Overlay
+            const gridHelper = new THREE.GridHelper(ARENA_RADIUS * 2.2, 60, 0x00f0ff, 0x1e293b);
+            gridHelper.position.y = 0.05;
+            scene.add(gridHelper);
+
+            // Glowing Boundary Ring
+            const ringGeo = new THREE.RingGeometry(ARENA_RADIUS - 1, ARENA_RADIUS + 3, 128);
+            const ringMat = new THREE.MeshBasicMaterial({
+                color: 0x00f0ff,
+                side: THREE.DoubleSide,
+                transparent: true,
+                opacity: 0.85
+            });
+            const boundaryRing = new THREE.Mesh(ringGeo, ringMat);
+            boundaryRing.rotation.x = -Math.PI / 2;
+            boundaryRing.position.y = 0.1;
+            scene.add(boundaryRing);
+
+            // Outer Fence Cylinder Wall
+            const wallGeo = new THREE.CylinderGeometry(ARENA_RADIUS, ARENA_RADIUS, 12, 128, 1, true);
+            const wallMat = new THREE.MeshBasicMaterial({
+                color: 0xff007f,
+                wireframe: true,
+                transparent: true,
+                opacity: 0.35
+            });
+            const wall = new THREE.Mesh(wallGeo, wallMat);
+            wall.position.y = 6;
+            scene.add(wall);
+        }
+
+        function createStarfield() {
+            const starGeo = new THREE.BufferGeometry();
+            const count = 1200;
+            const positions = new Float32Array(count * 3);
+
+            for (let i = 0; i < count * 3; i += 3) {
+                positions[i] = (Math.random() - 0.5) * 1200;
+                positions[i + 1] = Math.random() * 300 + 10;
+                positions[i + 2] = (Math.random() - 0.5) * 1200;
+            }
+
+            starGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+            const starMat = new THREE.PointsMaterial({
+                color: 0x00f0ff,
+                size: 1.2,
+                transparent: true,
+                opacity: 0.6
+            });
+            const starField = new THREE.Points(starGeo, starMat);
+            scene.add(starField);
+        }
+
+        class Snake {
+            constructor(name, skinKey, isPlayer = false, startPos = null) {
+                this.name = name;
+                this.skin = SKINS[skinKey] || SKINS.neonPink;
+                this.isPlayer = isPlayer;
+                this.alive = true;
+                this.score = 0;
+                this.kills = 0;
+                this.speed = BASE_SPEED;
+                this.isBoosting = false;
+                this.boostEnergy = 100;
+
+                this.angle = Math.random() * Math.PI * 2;
+                this.targetAngle = this.angle;
+                this.turnSpeed = 4.2;
+
+                this.segments = [];
+                this.segmentSpacing = SEGMENT_SPACING;
+                this.group = new THREE.Group();
+                scene.add(this.group);
+
+                const spawnPos = startPos || new THREE.Vector3(
+                    (Math.random() - 0.5) * ARENA_RADIUS * 1.2,
+                    1.2,
+                    (Math.random() - 0.5) * ARENA_RADIUS * 1.2
+                );
+
+                // Initial creation with 12 segments
+                this.initBody(spawnPos, 12);
+            }
+
+            initBody(startPos, initialLength) {
+                // Head Sphere
+                const headGeo = new THREE.SphereGeometry(1.4, 32, 32);
+                const headMat = new THREE.MeshStandardMaterial({
+                    color: this.skin.main,
+                    emissive: this.skin.main,
+                    emissiveIntensity: 0.4,
+                    roughness: 0.2,
+                    metalness: 0.8
+                });
+
+                this.head = new THREE.Mesh(headGeo, headMat);
+                this.head.position.copy(startPos);
+                this.head.castShadow = true;
+                this.group.add(this.head);
+                this.segments.push(this.head);
+
+                // Add Cyber Eyes/Visor on Head
+                const eyeGeo = new THREE.BoxGeometry(0.8, 0.4, 1.2);
+                const eyeMat = new THREE.MeshBasicMaterial({ color: 0xffffff });
+                const visor = new THREE.Mesh(eyeGeo, eyeMat);
+                visor.position.set(0, 0.3, 0.6);
+                this.head.add(visor);
+
+                // Body Segments
+                for (let i = 1; i < initialLength; i++) {
+                    this.addSegment(startPos.clone().sub(new THREE.Vector3(0, 0, i * this.segmentSpacing)));
+                }
+            }
+
+            addSegment(position) {
+                const index = this.segments.length;
+                const scale = Math.max(0.6, 1.2 - (index * 0.005));
+                const segGeo = new THREE.SphereGeometry(scale, 16, 16);
+
+                let segColor = this.skin.main;
+                if (this.skin.isRainbow) {
+                    segColor = new THREE.Color().setHSL((index * 0.05) % 1.0, 1.0, 0.5);
+                } else if (index % 2 === 0) {
+                    segColor = this.skin.accent;
+                }
+
+                const segMat = new THREE.MeshStandardMaterial({
+                    color: segColor,
+                    emissive: segColor,
+                    emissiveIntensity: 0.2,
+                    roughness: 0.3
+                });
+
+                const segment = new THREE.Mesh(segGeo, segMat);
+                segment.position.copy(position);
+                segment.castShadow = true;
+                this.group.add(segment);
+                this.segments.push(segment);
+            }
+
+            update(dt) {
+                if (!this.alive) return;
+
+                // Speed & Boosting
+                if (this.isBoosting && (this.segments.length > 6 || !this.isPlayer)) {
+                    this.speed = BOOST_SPEED;
+                    if (Math.random() < 0.4) {
+                        this.spawnBoostTrailParticle();
+                    }
+                    if (this.isPlayer) {
+                        this.boostEnergy = Math.max(0, this.boostEnergy - dt * 35);
+                        if (this.boostEnergy <= 0) this.isBoosting = false;
+                    }
+                    // Slowly lose segment when boosting continuously
+                    if (Math.random() < 0.05 && this.segments.length > 8) {
+                        const lastSeg = this.segments.pop();
+                        this.group.remove(lastSeg);
+                        spawnFoodCluster(lastSeg.position, 1, 3);
+                    }
+                } else {
+                    this.speed = BASE_SPEED;
+                    if (this.isPlayer) {
+                        this.boostEnergy = Math.min(100, this.boostEnergy + dt * 20);
+                    }
+                }
+
+                // Smooth Steering Angle Lerp
+                let diff = this.targetAngle - this.angle;
+                while (diff < -Math.PI) diff += Math.PI * 2;
+                while (diff > Math.PI) diff -= Math.PI * 2;
+                this.angle += diff * this.turnSpeed * dt;
+
+                // Move Head Forward
+                const moveVec = new THREE.Vector3(
+                    Math.cos(this.angle) * this.speed * dt,
+                    0,
+                    Math.sin(this.angle) * this.speed * dt
+                );
+                this.head.position.add(moveVec);
+                this.head.rotation.y = -this.angle + Math.PI / 2;
+
+                // Arena Boundary Check
+                const distFromCenter = Math.sqrt(this.head.position.x ** 2 + this.head.position.z ** 2);
+                if (distFromCenter > ARENA_RADIUS - 2) {
+                    if (this.isPlayer) {
+                        this.die();
+                    } else {
+                        // AI turns around if near wall
+                        this.targetAngle = Math.atan2(-this.head.position.z, -this.head.position.x) + (Math.random() - 0.5);
+                    }
+                }
+
+                // Follower Physics Constraints (Segment relaxation)
+                for (let i = 1; i < this.segments.length; i++) {
+                    const prev = this.segments[i - 1].position;
+                    const curr = this.segments[i].position;
+
+                    const dir = new THREE.Vector3().subVectors(curr, prev);
+                    const dist = dir.length();
+
+                    if (dist > this.segmentSpacing) {
+                        dir.normalize().multiplyScalar(this.segmentSpacing);
+                        curr.copy(prev).add(dir);
+                    }
+                    this.segments[i].lookAt(prev);
+                }
+
+                // Update light attached to player head
+                if (this.isPlayer) {
+                    headPointLight.position.copy(this.head.position).add(new THREE.Vector3(0, 3, 0));
+                }
+            }
+
+            spawnBoostTrailParticle() {
+                const tailPos = this.segments[this.segments.length - 1].position;
+                const pGeo = new THREE.SphereGeometry(0.4, 8, 8);
+                const pMat = new THREE.MeshBasicMaterial({
+                    color: this.skin.main,
+                    transparent: true,
+                    opacity: 0.8
+                });
+                const p = new THREE.Mesh(pGeo, pMat);
+                p.position.copy(tailPos).add(new THREE.Vector3(
+                    (Math.random() - 0.5) * 0.8,
+                    0,
+                    (Math.random() - 0.5) * 0.8
+                ));
+                scene.add(p);
+                boostParticles.push({ mesh: p, life: 0.6 });
+            }
+
+            grow(amount = 1) {
+                this.score += amount * 10;
+                for (let i = 0; i < amount; i++) {
+                    const lastPos = this.segments[this.segments.length - 1].position.clone();
+                    this.addSegment(lastPos);
+                }
+            }
+
+            die() {
+                if (!this.alive) return;
+                this.alive = false;
+
+                // Explosion food drop
+                this.segments.forEach((seg, idx) => {
+                    if (idx % 2 === 0) {
+                        spawnFoodCluster(seg.position, 1, 8);
+                    }
+                    this.group.remove(seg);
+                });
+
+                scene.remove(this.group);
+
+                if (this.isPlayer) {
+                    triggerGameOver();
+                } else {
+                    // Respawn AI after delay
+                    setTimeout(() => {
+                        if (isGameRunning) {
+                            const index = aiSnakes.indexOf(this);
+                            if (index !== -1) aiSnakes.splice(index, 1);
+                            spawnAI();
+                        }
+                    }, 2500);
+                }
+            }
+        }
+
+        const foodGeometry = new THREE.IcosahedronGeometry(0.6, 1);
+
+        function spawnFood(pos = null, value = 1) {
+            const foodMat = new THREE.MeshStandardMaterial({
+                color: new THREE.Color().setHSL(Math.random(), 0.9, 0.6),
+                emissive: new THREE.Color().setHSL(Math.random(), 0.9, 0.4),
+                emissiveIntensity: 0.6,
+                roughness: 0.1
+            });
+
+            const mesh = new THREE.Mesh(foodGeometry, foodMat);
+            const position = pos || new THREE.Vector3(
+                (Math.random() - 0.5) * (ARENA_RADIUS * 1.8),
+                0.8,
+                (Math.random() - 0.5) * (ARENA_RADIUS * 1.8)
+            );
+
+            mesh.position.copy(position);
+            mesh.rotation.set(Math.random() * Math.PI, Math.random() * Math.PI, 0);
+            scene.add(mesh);
+
+            foods.push({
+                mesh: mesh,
+                value: value,
+                pulseOffset: Math.random() * 10
+            });
+        }
+
+        function spawnFoodCluster(centerPos, count = 5, value = 5) {
+            for (let i = 0; i < count; i++) {
+                const offset = new THREE.Vector3(
+                    (Math.random() - 0.5) * 4,
+                    0,
+                    (Math.random() - 0.5) * 4
+                );
+                spawnFood(centerPos.clone().add(offset), value);
+            }
+        }
+
+        function initFoodSupply() {
+            for (let i = 0; i < INITIAL_FOOD_COUNT; i++) {
+                spawnFood();
+            }
+        }
+
+        function spawnAI() {
+            const botNames = ['CyberWorm', 'Vortex', 'NeonNinja', 'ShadowByte', 'AlphaWurm', 'Krypto', 'MechaSnake', 'Glitcher'];
+            const randomName = botNames[Math.floor(Math.random() * botNames.length)] + '_' + Math.floor(Math.random() * 99);
+            const skinKeys = Object.keys(SKINS);
+            const randomSkin = skinKeys[Math.floor(Math.random() * skinKeys.length)];
+
+            const ai = new Snake(randomName, randomSkin, false);
+            aiSnakes.push(ai);
+        }
+
+        function updateAILogic(ai, dt) {
+            if (!ai.alive) return;
+
+            // Simple AI state machine: Find nearest food or avoid player/walls
+            if (Math.random() < 0.03) {
+                let nearestFood = null;
+                let minDist = 60;
+
+                for (let f of foods) {
+                    const d = ai.head.position.distanceTo(f.mesh.position);
+                    if (d < minDist) {
+                        minDist = d;
+                        nearestFood = f;
+                    }
+                }
+
+                if (nearestFood) {
+                    const dir = new THREE.Vector3().subVectors(nearestFood.mesh.position, ai.head.position);
+                    ai.targetAngle = Math.atan2(dir.z, dir.x);
+                    ai.isBoosting = minDist < 20 && Math.random() < 0.3;
+                } else {
+                    // Random wander
+                    ai.targetAngle += (Math.random() - 0.5) * 1.5;
+                    ai.isBoosting = false;
+                }
+            }
+
+            // AI Collision Avoidance with other snakes
+            const allSnakes = [playerSnake, ...aiSnakes].filter(s => s && s.alive && s !== ai);
+            for (let other of allSnakes) {
+                for (let seg of other.segments) {
+                    const d = ai.head.position.distanceTo(seg.position);
+                    if (d < 12) {
+                        // Steer away quickly!
+                        const awayDir = new THREE.Vector3().subVectors(ai.head.position, seg.position);
+                        ai.targetAngle = Math.atan2(awayDir.z, awayDir.x);
+                        ai.isBoosting = true;
+                        break;
+                    }
+                }
+            }
+        }
+
+        function checkCollisions() {
+            if (!isGameRunning) return;
+
+            const allSnakes = [playerSnake, ...aiSnakes].filter(s => s && s.alive);
+
+            // 1. Food collisions
+            for (let snake of allSnakes) {
+                const headPos = snake.head.position;
+
+                for (let i = foods.length - 1; i >= 0; i--) {
+                    const food = foods[i];
+                    if (headPos.distanceTo(food.mesh.position) < 2.2) {
+                        // Eat food!
+                        snake.grow(food.value);
+                        scene.remove(food.mesh);
+                        foods.splice(i, 1);
+
+                        // Maintain food count
+                        if (foods.length < INITIAL_FOOD_COUNT) {
+                            spawnFood();
+                        }
+                    }
+                }
+            }
+
+            // 2. Snake Head vs Snake Body Collisions
+            for (let snake of allSnakes) {
+                const headPos = snake.head.position;
+
+                for (let other of allSnakes) {
+                    // Start from segment 3 if checking self to avoid self-head collision
+                    const startIdx = (snake === other) ? 4 : 0;
+
+                    for (let j = startIdx; j < other.segments.length; j++) {
+                        const segPos = other.segments[j].position;
+                        if (headPos.distanceTo(segPos) < 1.8) {
+                            // Snake died!
+                            if (other !== snake && other.isPlayer) {
+                                playerSnake.kills++;
+                            }
+                            snake.die();
+                            break;
+                        }
+                    }
+                    if (!snake.alive) break;
+                }
+            }
+        }
+
+        function setupInputListeners() {
+            // Mouse move aiming
+            window.addEventListener('mousemove', (e) => {
+                mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+                mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+                // Direction relative to screen center
+                const dx = e.clientX - window.innerWidth / 2;
+                const dy = e.clientY - window.innerHeight / 2;
+                mouseWorldAngle = Math.atan2(dy, dx);
+
+                if (playerSnake && playerSnake.alive) {
+                    playerSnake.targetAngle = mouseWorldAngle;
+                }
+            });
+
+            // Boost inputs (Mouse click & Spacebar)
+            window.addEventListener('mousedown', () => {
+                mouse.isDown = true;
+                if (playerSnake) playerSnake.isBoosting = true;
+            });
+
+            window.addEventListener('mouseup', () => {
+                mouse.isDown = false;
+                if (playerSnake && !keys.space) playerSnake.isBoosting = false;
+            });
+
+            window.addEventListener('keydown', (e) => {
+                if (e.code === 'Space') {
+                    keys.space = true;
+                    if (playerSnake) playerSnake.isBoosting = true;
+                }
+                if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = true;
+                if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = true;
+            });
+
+            window.addEventListener('keyup', (e) => {
+                if (e.code === 'Space') {
+                    keys.space = false;
+                    if (playerSnake && !mouse.isDown) playerSnake.isBoosting = false;
+                }
+                if (e.code === 'KeyA' || e.code === 'ArrowLeft') keys.a = false;
+                if (e.code === 'KeyD' || e.code === 'ArrowRight') keys.d = false;
+            });
+
+            // Skin Selection UI
+            document.querySelectorAll('.skin-option').forEach(elem => {
+                elem.addEventListener('click', () => {
+                    document.querySelectorAll('.skin-option').forEach(s => s.classList.remove('active'));
+                    elem.classList.add('active');
+                    selectedSkinKey = elem.dataset.skin;
+                });
+            });
+
+            // Start & Restart Buttons
+            document.getElementById('start-btn').addEventListener('click', startGame);
+            document.getElementById('restart-btn').addEventListener('click', startGame);
+        }
+
+        function updateUI() {
+            if (!playerSnake || !playerSnake.alive) return;
+
+            // Stats HUD
+            document.getElementById('hud-score').innerText = playerSnake.score;
+            document.getElementById('hud-length').innerText = playerSnake.segments.length + 'm';
+            document.getElementById('hud-kills').innerText = playerSnake.kills;
+
+            // Boost Bar
+            const boostBar = document.getElementById('boost-bar');
+            boostBar.style.width = playerSnake.boostEnergy + '%';
+
+            // Leaderboard Update
+            const allSnakes = [playerSnake, ...aiSnakes].filter(s => s && s.alive);
+            allSnakes.sort((a, b) => b.score - a.score);
+
+            const lbList = document.getElementById('leaderboard-list');
+            lbList.innerHTML = '';
+
+            allSnakes.slice(0, 5).forEach((s, idx) => {
+                const li = document.createElement('li');
+                li.className = `flex justify-between items-center ${s.isPlayer ? 'text-cyan-400 font-bold' : 'text-slate-300'}`;
+                li.innerHTML = `
+                    <span>${idx + 1}. ${s.name.substring(0, 10)}</span>
+                    <span class="font-orbitron">${s.score}</span>
+                `;
+                lbList.appendChild(li);
+            });
+
+            // Minimap Drawing
+            drawMinimap();
+        }
+
+        function drawMinimap() {
+            const canvas = document.getElementById('minimap');
+            const ctx = canvas.getContext('2d');
+            const w = canvas.width;
+            const h = canvas.height;
+            const center = w / 2;
+            const scale = center / ARENA_RADIUS;
+
+            ctx.clearRect(0, 0, w, h);
+
+            // Draw Outer Ring
+            ctx.strokeStyle = '#00f0ff';
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.arc(center, center, center - 2, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Draw Foods (sample subset for performance)
+            ctx.fillStyle = 'rgba(0, 240, 255, 0.4)';
+            for (let i = 0; i < foods.length; i += 4) {
+                const f = foods[i];
+                const mx = center + f.mesh.position.x * scale;
+                const my = center + f.mesh.position.z * scale;
+                ctx.fillRect(mx, my, 1.5, 1.5);
+            }
+
+            // Draw AI Bots
+            ctx.fillStyle = '#ff007f';
+            for (let ai of aiSnakes) {
+                if (ai.alive) {
+                    const mx = center + ai.head.position.x * scale;
+                    const my = center + ai.head.position.z * scale;
+                    ctx.beginPath();
+                    ctx.arc(mx, my, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+            }
+
+            // Draw Player
+            if (playerSnake && playerSnake.alive) {
+                const px = center + playerSnake.head.position.x * scale;
+                const py = center + playerSnake.head.position.z * scale;
+                ctx.fillStyle = '#00ff66';
+                ctx.shadowColor = '#00ff66';
+                ctx.shadowBlur = 6;
+                ctx.beginPath();
+                ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const dt = Math.min(clock.getDelta(), 0.1);
+
+            if (isGameRunning) {
+                // Keyboard steering fallback
+                if (playerSnake && playerSnake.alive) {
+                    if (keys.a) playerSnake.targetAngle -= 3.0 * dt;
+                    if (keys.d) playerSnake.targetAngle += 3.0 * dt;
+                    playerSnake.update(dt);
+                }
+
+                // AI updates
+                for (let ai of aiSnakes) {
+                    updateAILogic(ai, dt);
+                    ai.update(dt);
+                }
+
+                // Check collisions
+                checkCollisions();
+
+                // Food rotation animation
+                const time = Date.now() * 0.003;
+                for (let f of foods) {
+                    f.mesh.rotation.y += 0.02;
+                    f.mesh.position.y = 0.8 + Math.sin(time + f.pulseOffset) * 0.2;
+                }
+
+                // Boost Particles lifetime update
+                for (let i = boostParticles.length - 1; i >= 0; i--) {
+                    const bp = boostParticles[i];
+                    bp.life -= dt;
+                    bp.mesh.scale.multiplyScalar(0.94);
+                    if (bp.life <= 0) {
+                        scene.remove(bp.mesh);
+                        boostParticles.splice(i, 1);
+                    }
+                }
+
+                // Dynamic Camera Scaling & Follow
+                if (playerSnake && playerSnake.alive) {
+                    const head = playerSnake.head.position;
+                    const wormLen = playerSnake.segments.length;
+
+                    // Camera expands outward as worm gets larger!
+                    const targetCamDist = 50 + wormLen * 0.45;
+                    const targetCamHeight = 45 + wormLen * 0.4;
+
+                    camera.position.x += (head.x - camera.position.x) * 0.08;
+                    camera.position.z += (head.z + targetCamDist - camera.position.z) * 0.08;
+                    camera.position.y += (targetCamHeight - camera.position.y) * 0.08;
+
+                    camera.lookAt(head.x, 0, head.z);
+                }
+
+                updateUI();
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        function startGame() {
+            const nameInput = document.getElementById('nickname-input').value.trim() || 'CyberWurm';
+
+            // Clear old objects
+            if (playerSnake) playerSnake.die();
+            aiSnakes.forEach(ai => ai.die());
+            aiSnakes = [];
+
+            foods.forEach(f => scene.remove(f.mesh));
+            foods = [];
+
+            initFoodSupply();
+
+            // Create Player
+            playerSnake = new Snake(nameInput, selectedSkinKey, true, new THREE.Vector3(0, 1.2, 0));
+
+            // Create AI Bots
+            for (let i = 0; i < AI_COUNT; i++) {
+                spawnAI();
+            }
+
+            // Hide Overlays
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+
+            isGameRunning = true;
+        }
+
+        function triggerGameOver() {
+            isGameRunning = false;
+
+            // Save Highscore
+            const currentHigh = parseInt(localStorage.getItem('cyber_wurm_highscore') || '0', 10);
+            if (playerSnake.score > currentHigh) {
+                localStorage.setItem('cyber_wurm_highscore', playerSnake.score.toString());
+            }
+
+            document.getElementById('go-score').innerText = playerSnake.score;
+            document.getElementById('go-length').innerText = playerSnake.segments.length + 'm';
+            document.getElementById('go-kills').innerText = playerSnake.kills;
+            document.getElementById('go-highscore').innerText = Math.max(playerSnake.score, currentHigh);
+
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('gameover-screen').classList.remove('hidden');
+
+            updateHighscoreDisplays();
+        }
+
+        function updateHighscoreDisplays() {
+            const currentHigh = localStorage.getItem('cyber_wurm_highscore') || '0';
+            document.getElementById('menu-highscore').innerText = currentHigh;
+        }
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        // Window Load Initialization
+        window.onload = function() {
+            initEngine();
+            animate();
+        };
+    </script>
+</body>
+</html>
