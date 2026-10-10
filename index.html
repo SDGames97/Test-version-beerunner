@@ -2,531 +2,88 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Crypt of the Blighted - Mobile Co-Op</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Monster RPG</title>
     <style>
-        * {
-            box-sizing: border-box;
-            user-select: none;
-            -webkit-user-select: none;
-        }
         body {
-            margin: 0;
-            background-color: #0b0b0b;
-            color: #eee;
+            background-color: #1a1a1a;
+            color: #fff;
             font-family: 'Courier New', Courier, monospace;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
             height: 100vh;
+            margin: 0;
             overflow: hidden;
-            touch-action: none;
         }
-        header {
-            width: 100%;
-            background: #1c1c1c;
-            padding: 8px 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 14px;
-            border-bottom: 2px solid #333;
-        }
-        .hud-player {
+        #game-container {
+            border: 4px solid #4ade80;
+            background-color: #0f172a;
+            width: 640px;
+            height: 480px;
+            position: relative;
+            box-shadow: 0 0 20px rgba(74, 222, 128, 0.4);
             display: flex;
             flex-direction: column;
-            gap: 2px;
-        }
-        #gameContainer {
-            position: relative;
-            flex-grow: 1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            width: 100%;
-            background: #141414;
         }
         canvas {
-            background-color: #1a1a1a;
+            background-color: #86efac;
             display: block;
-            max-width: 100%;
-            max-height: 100%;
         }
-        /* Mobile Touch Controls Overlay */
-        .controls-container {
-            width: 100%;
-            height: 150px;
-            background: #1c1c1c;
+        #ui {
+            flex: 1;
+            background-color: #1e293b;
+            border-top: 4px solid #4ade80;
+            padding: 10px;
             display: flex;
-            justify-content: space-around;
-            align-items: center;
-            border-top: 2px solid #333;
-            padding: 0 10px;
-        }
-        .stick-area {
-            width: 120px;
-            height: 120px;
-            background: rgba(255,255,255,0.05);
-            border: 2px solid rgba(255,255,255,0.2);
-            border-radius: 50%;
-            position: relative;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .stick-knob {
-            width: 50px;
-            height: 50px;
-            background: rgba(255,255,255,0.4);
-            border-radius: 50%;
-            position: absolute;
-        }
-        .action-buttons {
-            display: flex;
-            gap: 15px;
-        }
-        .btn-fire {
-            width: 70px;
-            height: 70px;
-            background: #e74c3c;
-            border: none;
-            border-radius: 50%;
-            color: white;
-            font-weight: bold;
+            flex-direction: column;
+            justify-content: space-between;
             font-size: 14px;
-            box-shadow: 0 4px 0 #962d22;
+        }
+        .stats-box {
+            display: flex;
+            justify-content: space-between;
+        }
+        .btn-group {
+            display: flex;
+            gap: 10px;
+            margin-top: 5px;
+        }
+        button {
+            background-color: #334155;
+            color: #4ade80;
+            border: 2px solid #4ade80;
+            padding: 6px 12px;
+            font-family: 'Courier New', Courier, monospace;
+            font-weight: bold;
             cursor: pointer;
-            outline: none;
+            flex: 1;
         }
-        .btn-fire:active {
-            transform: translateY(4px);
-            box-shadow: 0 0 0 #962d22;
+        button:hover {
+            background-color: #4ade80;
+            color: #0f172a;
         }
-        .btn-fire.p2 {
-            background: #3498db;
-            box-shadow: 0 4px 0 #20638f;
-        }
-        .btn-fire.p2:active {
-            box-shadow: 0 0 0 #20638f;
+        #text-log {
+            height: 40px;
+            overflow-y: auto;
+            background: #0f172a;
+            padding: 5px;
+            border: 1px solid #334155;
+            font-size: 13px;
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <div class="hud-player" style="color: #3498db;">
-            <strong>P1 (Blau):</strong> HP: <span id="p1Hp">100</span> | <span id="p1Wep">Pistole</span>
+<div id="game-container">
+    <canvas id="canvas" width="640" height="320"></canvas>
+    <div id="ui">
+        <div class="stats-box">
+            <div id="player-status">Spieler Monster: -</div>
+            <div id="enemy-status">Gegner: -</div>
         </div>
-        <div><strong>Welle:</strong> <span id="waveText">1</span></div>
-        <div class="hud-player" style="color: #e74c3c; text-align: right;">
-            <strong>P2 (Rot):</strong> HP: <span id="p2Hp">100</span> | <span id="p2Wep">Pistole</span>
-        </div>
-    </header>
-
-    <div id="gameContainer">
-        <canvas id="gameCanvas" width="800" height="450"></canvas>
-    </div>
-
-    <div class="controls-container">
-        <!-- P1 Joystick -->
-        <div class="stick-area" id="stickP1">
-            <div class="stick-knob" id="knobP1"></div>
-        </div>
-        <button class="btn-fire" id="fireP1">FEUER P1</button>
-
-        <!-- P2 Joystick -->
-        <div class="stick-area" id="stickP2">
-            <div class="stick-knob" id="knobP2"></div>
-        </div>
-        <button class="btn-fire p2" id="fireP2">FEUER P2</button>
-    </div>
-
-<script>
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
-
-let gameState = "start"; // start, playing, gameover
-let wave = 1;
-let zombiesToSpawn = 5;
-let spawnTimer = 0;
-
-// Waffen-Definitionen
-const weapons = {
-    pistol: { name: "Pistole", fireRate: 15, damage: 25, speed: 7, spread: 0, color: "#ff0" },
-    shotgun: { name: "Schrotflinte", fireRate: 40, damage: 15, speed: 6, spread: 0.3, pellets: 5, color: "#f80" },
-    rifle: { name: "Sturmgewehr", fireRate: 6, damage: 16, speed: 9, spread: 0.05, color: "#0ff" }
-};
-
-class Player {
-    constructor(x, y, color) {
-        this.x = x;
-        this.y = y;
-        this.radius = 14;
-        this.speed = 3;
-        this.hp = 100;
-        this.color = color;
-        this.weapon = weapons.pistol;
-        this.shootCooldown = 0;
-        this.facingX = 1;
-        this.facingY = 0;
-        this.inputX = 0;
-        this.inputY = 0;
-        this.isFiring = false;
-    }
-
-    update() {
-        if (this.hp <= 0) return;
-
-        if (this.inputX !== 0 || this.inputY !== 0) {
-            this.x += this.inputX * this.speed;
-            this.y += this.inputY * this.speed;
-            this.facingX = this.inputX;
-            this.facingY = this.inputY;
-        }
-
-        // Grenzen
-        this.x = Math.max(this.radius, Math.min(canvas.width - this.radius, this.x));
-        this.y = Math.max(this.radius, Math.min(canvas.height - this.radius, this.y));
-
-        if (this.shootCooldown > 0) this.shootCooldown--;
-        if (this.isFiring && this.shootCooldown === 0) {
-            this.shoot();
-        }
-    }
-
-    shoot() {
-        this.shootCooldown = this.weapon.fireRate;
-        let angle = Math.atan2(this.facingY, this.facingX);
-
-        if (this.weapon.pellets) {
-            for (let i = 0; i < this.weapon.pellets; i++) {
-                let sa = angle + (Math.random() - 0.5) * this.weapon.spread;
-                bullets.push(new Bullet(this.x, this.y, Math.cos(sa), Math.sin(sa), this.weapon));
-            }
-        } else {
-            let sa = angle + (Math.random() - 0.5) * this.weapon.spread;
-            bullets.push(new Bullet(this.x, this.y, Math.cos(sa), Math.sin(sa), this.weapon));
-        }
-    }
-
-    draw() {
-        if (this.hp <= 0) return;
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#fff";
-        ctx.lineWidth = 2;
-        ctx.stroke();
-
-        // Blickrichtung
-        ctx.beginPath();
-        ctx.moveTo(this.x, this.y);
-        ctx.lineTo(this.x + this.facingX * 18, this.y + this.facingY * 18);
-        ctx.strokeStyle = "#fff";
-        ctx.stroke();
-    }
-}
-
-class Bullet {
-    constructor(x, y, dx, dy, weapon) {
-        this.x = x;
-        this.y = y;
-        this.dx = dx;
-        this.dy = dy;
-        this.weapon = weapon;
-        this.speed = weapon.speed;
-        this.radius = 4;
-        this.active = true;
-    }
-    update() {
-        this.x += this.dx * this.speed;
-        this.y += this.dy * this.speed;
-        if (this.x < 0 || this.x > canvas.width || this.y < 0 || this.y > canvas.height) {
-            this.active = false;
-        }
-    }
-    draw() {
-        ctx.fillStyle = this.weapon.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-    }
-}
-
-class Zombie {
-    constructor(x, y, type) {
-        this.x = x;
-        this.y = y;
-        this.type = type;
-        if (type === 'walker') {
-            this.radius = 12;
-            this.speed = 1.6;
-            this.hp = 40 + (wave * 5);
-            this.color = "#4a8a4a";
-        } else if (type === 'runner') {
-            this.radius = 10;
-            this.speed = 2.8;
-            this.hp = 25 + (wave * 3);
-            this.color = "#a84a4a";
-        } else {
-            this.radius = 12;
-            this.speed = 1.3;
-            this.hp = 35 + (wave * 4);
-            this.color = "#8a4aa8";
-        }
-    }
-
-    update(targets) {
-        let target = targets[0];
-        if (targets.length > 1 && targets[1].hp > 0) {
-            let d1 = Math.hypot(targets[0].x - this.x, targets[0].y - this.y);
-            let d2 = Math.hypot(targets[1].x - this.x, targets[1].y - this.y);
-            if (d2 < d1) target = targets[1];
-        }
-        if (target.hp <= 0) target = targets.find(t => t.hp > 0);
-        if (!target) return;
-
-        let angle = Math.atan2(target.y - this.y, target.x - this.x);
-        this.x += Math.cos(angle) * this.speed;
-        this.y += Math.sin(angle) * this.speed;
-
-        targets.forEach(p => {
-            if (p.hp > 0 && Math.hypot(p.x - this.x, p.y - this.y) < p.radius + this.radius) {
-                p.hp -= 0.4;
-            }
-        });
-    }
-
-    draw() {
-        ctx.fillStyle = this.color;
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.strokeStyle = "#222";
-        ctx.stroke();
-    }
-}
-
-class Loot {
-    constructor(x, y, weapon) {
-        this.x = x;
-        this.y = y;
-        this.weapon = weapon;
-        this.radius = 9;
-    }
-    draw() {
-        ctx.fillStyle = "#ff0";
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-    }
-}
-
-let p1, p2, players, bullets, zombies, loots;
-
-function initGame() {
-    p1 = new Player(200, 225, "#3498db");
-    p2 = new Player(600, 225, "#e74c3c");
-    players = [p1, p2];
-    bullets = [];
-    zombies = [];
-    loots = [];
-    wave = 1;
-    zombiesToSpawn = 5;
-    gameState = "playing";
-}
-
-function spawnZombie() {
-    let edge = Math.floor(Math.random() * 4);
-    let x, y;
-    if (edge === 0) { x = Math.random() * canvas.width; y = -20; }
-    else if (edge === 1) { x = Math.random() * canvas.width; y = canvas.height + 20; }
-    else if (edge === 2) { x = -20; y = Math.random() * canvas.height; }
-    else { x = canvas.width + 20; y = Math.random() * canvas.height; }
-
-    let types = ['walker', 'walker', 'runner'];
-    if (wave >= 2) types.push('spitter');
-    zombies.push(new Zombie(x, y, types[Math.floor(Math.random() * types.length)]));
-}
-
-function update() {
-    if (gameState === "playing") {
-        players.forEach(p => p.update());
-        bullets.forEach(b => b.update());
-        bullets = bullets.filter(b => b.active);
-        zombies.forEach(z => z.update(players));
-
-        // Kollision Schuss vs Zombie
-        bullets.forEach(b => {
-            zombies.forEach((z, zIdx) => {
-                if (b.active && Math.hypot(b.x - z.x, b.y - z.y) < b.radius + z.radius) {
-                    z.hp -= b.weapon.damage;
-                    b.active = false;
-                    if (z.hp <= 0) {
-                        if (Math.random() < 0.25) {
-                            let w = Math.random() < 0.5 ? weapons.shotgun : weapons.rifle;
-                            loots.push(new Loot(z.x, z.y, w));
-                        }
-                        zombies.splice(zIdx, 1);
-                    }
-                }
-            });
-        });
-
-        // Kollision Spieler vs Loot
-        loots.forEach((l, lIdx) => {
-            players.forEach(p => {
-                if (p.hp > 0 && Math.hypot(p.x - l.x, p.y - l.y) < p.radius + l.radius) {
-                    p.weapon = l.weapon;
-                    loots.splice(lIdx, 1);
-                }
-            });
-        });
-
-        if (zombies.length === 0 && zombiesToSpawn === 0) {
-            wave++;
-            zombiesToSpawn = 5 + wave * 3;
-        }
-
-        if (zombiesToSpawn > 0) {
-            spawnTimer++;
-            if (spawnTimer > Math.max(25, 60 - wave * 4)) {
-                spawnZombie();
-                zombiesToSpawn--;
-                spawnTimer = 0;
-            }
-        }
-
-        if (p1.hp <= 0 && p2.hp <= 0) {
-            gameState = "gameover";
-        }
-
-        // HUD aktualisieren
-        document.getElementById("waveText").innerText = wave;
-        document.getElementById("p1Hp").innerText = Math.max(0, Math.floor(p1.hp));
-        document.getElementById("p1Wep").innerText = p1.weapon.name;
-        document.getElementById("p2Hp").innerText = Math.max(0, Math.floor(p2.hp));
-        document.getElementById("p2Wep").innerText = p2.weapon.name;
-    }
-}
-
-function draw() {
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-    if (gameState === "start") {
-        ctx.fillStyle = "#fff";
-        ctx.font = "20px 'Courier New'";
-        ctx.textAlign = "center";
-        ctx.fillText("CRYPT OF THE BLIGHTED", canvas.width / 2, canvas.height / 2 - 20);
-        ctx.font = "14px 'Courier New'";
-        ctx.fillText("Berühre den Bildschirm zum Starten", canvas.width / 2, canvas.height / 2 + 20);
-        return;
-    }
-
-    if (gameState === "playing") {
-        loots.forEach(l => l.draw());
-        bullets.forEach(b => b.draw());
-        zombies.forEach(z => z.draw());
-        players.forEach(p => p.draw());
-    }
-
-    if (gameState === "gameover") {
-        ctx.fillStyle = "rgba(0,0,0,0.8)";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-        ctx.fillStyle = "#e74c3c";
-        ctx.font = "30px 'Courier New'";
-        ctx.textAlign = "center";
-        ctx.fillText("GAME OVER", canvas.width / 2, canvas.height / 2 - 10);
-        ctx.fillStyle = "#fff";
-        ctx.font = "14px 'Courier New'";
-        ctx.fillText("Tippe zum Neustarten", canvas.width / 2, canvas.height / 2 + 30);
-    }
-}
-
-function loop() {
-    update();
-    draw();
-    requestAnimationFrame(loop);
-}
-
-// Touch-Joystick Steuerung Logik
-function setupJoystick(stickId, knobId, player) {
-    const stick = document.getElementById(stickId);
-    const knob = document.getElementById(knobId);
-    let activeTouchId = null;
-    let maxDist = 40;
-
-    stick.addEventListener("touchstart", e => {
-        if (gameState === "start") { initGame(); return; }
-        if (gameState === "gameover") { initGame(); return; }
-        let touch = e.changedTouches[0];
-        activeTouchId = touch.identifier;
-        e.preventDefault();
-    });
-
-    window.addEventListener("touchmove", e => {
-        if (activeTouchId === null) return;
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            let touch = e.changedTouches[i];
-            if (touch.identifier === activeTouchId) {
-                let rect = stick.getBoundingClientRect();
-                let centerX = rect.left + rect.width / 2;
-                let centerY = rect.top + rect.height / 2;
-                let dx = touch.clientX - centerX;
-                let dy = touch.clientY - centerY;
-                let dist = Math.hypot(dx, dy);
-
-                if (dist > maxDist) {
-                    dx = (dx / dist) * maxDist;
-                    dy = (dy / dist) * maxDist;
-                }
-
-                knob.style.transform = `translate(${dx}px, ${dy}px)`;
-                player.inputX = dx / maxDist;
-                player.inputY = dy / maxDist;
-            }
-        }
-    });
-
-    window.addEventListener("touchend", e => {
-        for (let i = 0; i < e.changedTouches.length; i++) {
-            if (e.changedTouches[i].identifier === activeTouchId) {
-                activeTouchId = null;
-                knob.style.transform = `translate(0px, 0px)`;
-                player.inputX = 0;
-                player.inputY = 0;
-            }
-        }
-    });
-}
-
-setupJoystick("stickP1", "knobP1", p1);
-setupJoystick("stickP2", "knobP2", p2);
-
-// Feuer-Buttons verbinden
-document.getElementById("fireP1").addEventListener("touchstart", () => p1.isFiring = true);
-document.getElementById("fireP1").addEventListener("touchend", () => p1.isFiring = false);
-document.getElementById("fireP2").addEventListener("touchstart", () => p2.isFiring = true);
-document.getElementById("fireP2").addEventListener("touchend", () => p2.isFiring = false);
-
-// Fallback für Klicks am PC
-window.addEventListener("click", () => {
-    if (gameState === "start" || gameState === "gameover") initGame();
-});
-
-// Start-Instanz
-p1 = new Player(200, 225, "#3498db");
-p2 = new Player(600, 225, "#e74c3c");
-players = [p1, p2];
-bullets = [];
-zombies = [];
-loots = [];
-
-loop();
-</script>
-
-</body>
-</html>
+        <div id="text-log">Nutze die Pfeiltasten zum Bewegen. Geh ins hohe Gras (dunkelgrün), um Monster zu finden!</div>
+        <div class="btn-group" id="controls" style="display:none;">
+            <button onclick="battleAction('fight')">Angreifen</button>
+            <button onclick="battleAction('catch')
