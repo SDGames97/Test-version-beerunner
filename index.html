@@ -2,16 +2,17 @@
 <html lang="de">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>3D Duelists of the Grid</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Wildnis Evolution 3D</title>
     <style>
         body {
             margin: 0;
+            padding: 0;
             overflow: hidden;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #111;
-            color: #fff;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
             user-select: none;
+            -webkit-user-select: none;
         }
 
         #canvas-container {
@@ -20,721 +21,390 @@
             display: block;
         }
 
-        /* Overlay für die Boss-Auswahl */
-        #boss-selection-modal {
+        /* Clean HUD */
+        #hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            pointer-events: none;
+            color: white;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .hud-panel {
+            background: rgba(0, 0, 0, 0.4);
+            padding: 10px 18px;
+            border-radius: 20px;
+            backdrop-filter: blur(5px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        #level-display {
+            font-size: 18px;
+            font-weight: bold;
+            letter-spacing: 1px;
+        }
+
+        #exp-container {
+            width: 120px;
+            height: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 4px;
+            margin-top: 6px;
+            overflow: hidden;
+        }
+
+        #exp-bar {
+            width: 0%;
+            height: 100%;
+            background: #4ade80;
+            transition: width 0.2s ease-out;
+        }
+
+        #creature-name {
+            font-size: 14px;
+            color: #a7f3d0;
+            margin-bottom: 2px;
+        }
+
+        /* Dynamic Joystick Overlay */
+        #joystick-zone {
             position: absolute;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            background: rgba(10, 10, 15, 0.95);
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            z-index: 100;
-        }
-
-        #boss-selection-modal h1 {
-            font-size: 2.5rem;
-            margin-bottom: 10px;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-            color: #f39c12;
-            text-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
-        }
-
-        #boss-selection-modal p {
-            color: #ccc;
-            margin-bottom: 30px;
-        }
-
-        .boss-cards-container {
-            display: flex;
-            gap: 20px;
-        }
-
-        .boss-card {
-            background: #1e272e;
-            border: 2px solid #485460;
-            border-radius: 12px;
-            padding: 20px;
-            width: 220px;
-            text-align: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
-        }
-
-        .boss-card:hover {
-            transform: translateY(-10px);
-            border-color: #f39c12;
-            box-shadow: 0 10px 25px rgba(243, 156, 18, 0.4);
-        }
-
-        .boss-card h3 {
-            margin-top: 0;
-            color: #eccc68;
-        }
-
-        .boss-card .stats {
-            font-size: 0.9rem;
-            margin: 15px 0;
-            color: #a4b0be;
-            text-align: left;
-        }
-
-        .btn-select {
-            background: #f39c12;
-            color: #fff;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 6px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-
-        /* UI HUD während des Spiels */
-        #ui-overlay {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            pointer-events: none;
             z-index: 10;
         }
 
-        .hud-panel {
-            background: rgba(20, 20, 30, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 15px;
-            border-radius: 8px;
-            min-width: 260px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-
-        .hud-panel h2 {
-            margin: 0 0 10px 0;
-            font-size: 1.2rem;
-            color: #f39c12;
-        }
-
-        #turn-indicator {
+        #joystick-base {
             position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(20, 20, 30, 0.85);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            padding: 12px 24px;
-            border-radius: 8px;
-            font-weight: bold;
-            font-size: 1.1rem;
-            color: #2ed573;
+            width: 90px;
+            height: 90px;
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            display: none;
+            pointer-events: none;
         }
 
-        #action-btn {
+        #joystick-stick {
             position: absolute;
-            bottom: 30px;
-            right: 30px;
-            background: #ff4757;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            font-size: 1.1rem;
-            font-weight: bold;
-            border-radius: 30px;
-            cursor: pointer;
-            box-shadow: 0 4px 15px rgba(255, 71, 87, 0.4);
-            transition: all 0.2s ease;
+            width: 40px;
+            height: 40px;
+            background: rgba(255, 255, 255, 0.6);
+            border-radius: 50%;
+            top: 25px;
+            left: 25px;
+            pointer-events: none;
         }
 
-        #action-btn:hover {
-            background: #ff6b81;
-            transform: scale(1.05);
-        }
-
-        #log-panel {
+        /* Notification Popup */
+        #notification {
             position: absolute;
-            bottom: 30px;
-            left: 30px;
-            width: 320px;
-            max-height: 150px;
-            background: rgba(0, 0, 0, 0.7);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            border-radius: 8px;
-            padding: 10px;
-            overflow-y: auto;
-            font-size: 0.85rem;
-            color: #ddd;
-        }
-
-        .element-tag {
-            display: inline-block;
-            padding: 2px 6px;
-            border-radius: 4px;
-            font-size: 0.75rem;
+            top: 25%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: #facc15;
+            font-size: 24px;
             font-weight: bold;
-            color: white;
-            margin-top: 5px;
+            text-shadow: 0 2px 8px rgba(0,0,0,0.9);
+            opacity: 0;
+            transition: opacity 0.4s ease;
+            pointer-events: none;
+            text-align: center;
         }
     </style>
-    <!-- Three.js Bibliothek -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
 </head>
 <body>
 
-    <div id="canvas-container"></div>
-
-    <!-- UI Overlay -->
-    <div id="ui-overlay">
+    <div id="hud">
         <div class="hud-panel">
-            <h2>Ausgewählte Einheit</h2>
-            <div id="unit-info">Klicke auf eine Spielfigur...</div>
+            <div id="creature-name">Stufe 1: Larve</div>
+            <div id="level-display">LVL 1 / 999</div>
+            <div id="exp-container"><div id="exp-bar"></div></div>
+        </div>
+        <div class="hud-panel" style="font-size: 14px;">
+            Wilde Wildnis 🌲
         </div>
     </div>
 
-    <div id="turn-indicator">Zug: Spieler</div>
+    <div id="notification">EVOLUTION!</div>
 
-    <div id="log-panel">
-        <div>Willkommen beim Duell! Wähle deinen Boss aus.</div>
+    <div id="joystick-zone">
+        <div id="joystick-base">
+            <div id="joystick-stick"></div>
+        </div>
     </div>
 
-    <button id="action-btn" onclick="endTurn()">Zug Beenden</button>
+    <div id="canvas-container"></div>
 
-    <!-- Modal für Boss-Auswahl -->
-    <div id="boss-selection-modal">
-        <h1>Wähle deinen Boss-Kommandanten</h1>
-        <p>Jeder Boss bestimmt deine Strategie auf dem Schlachtfeld.</p>
-        <div class="boss-cards-container" id="boss-cards"></div>
-    </div>
+    <!-- Three.js für 3D-Grafik -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
     <script>
-        // --- DATA DEFINITIONS ---
+        // --- SPIEL-KONFIGURATION & STATE ---
+        let level = 1;
+        let exp = 0;
+        let maxExp = 10;
 
-        // 10 Elemente (Typen) mit Farben
-        const ELEMENTS = {
-            NORMAL:      { name: "Normal",      color: 0x95a5a6, bg: "#95a5a6" },
-            FEUER:       { name: "Feuer",       color: 0xe74c3c, bg: "#e74c3c" },
-            WASSER:      { name: "Wasser",      color: 0x3498db, bg: "#3498db" },
-            LUFT:        { name: "Luft",        color: 0x8e44ad, bg: "#8e44ad" },
-            ERDE:        { name: "Erde",        color: 0x795548, bg: "#795548" },
-            ENGEL:       { name: "Engel",       color: 0xf1c40f, bg: "#f1c40f" },
-            MASCHINE:    { name: "Maschine",    color: 0x7f8c8d, bg: "#7f8c8d" },
-            ELEKTRONIK:  { name: "Elektronik",  color: 0x00d2d3, bg: "#00d2d3" },
-            // 2 selbst ausgedachte Elemente:
-            SCHATTEN:    { name: "Schatten",    color: 0x2d3436, bg: "#2d3436" },
-            DRACHE:      { name: "Drache",      color: 0xd63031, bg: "#d63031" }
-        };
-
-        // 3 Boss-Charaktere zur Auswahl
-        const BOSSES = [
-            {
-                id: "boss_1",
-                name: "Ignis der Flammenlord",
-                element: ELEMENTS.FEUER,
-                atk: 2800,
-                def: 2000,
-                desc: "Ein gigantischer Krieger aus flüssiger Lava. Hohe Angriffskraft.",
-                color: 0xd63031
-            },
-            {
-                id: "boss_2",
-                name: "Aegis das Titanen-Schiff",
-                element: ELEMENTS.MASCHINE,
-                atk: 1800,
-                def: 3200,
-                desc: "Eine unüberwindbare Festung aus stahlhartem Panzerglas.",
-                color: 0x636e72
-            },
-            {
-                id: "boss_3",
-                name: "Celestia die Erhabene",
-                element: ELEMENTS.ENGEL,
-                atk: 2400,
-                def: 2400,
-                desc: "Ausgewogene Macht mit göttlicher Aura auf dem Schlachtfeld.",
-                color: 0xfabca1
-            }
+        const evolutionaryStages = [
+            { maxLvl: 50, name: "Larve", scale: 0.5, color: 0x84cc16 },
+            { maxLvl: 150, name: "Raupe", scale: 0.9, color: 0x10b981 },
+            { maxLvl: 300, name: "Käfer", scale: 1.4, color: 0x06b6d4 },
+            { maxLvl: 500, name: "Fuchs", scale: 2.2, color: 0xf97316 },
+            { maxLvl: 750, name: "Wolf", scale: 3.2, color: 0x64748b },
+            { maxLvl: 999, name: "Urzeit-Bär", scale: 4.8, color: 0x78350f }
         ];
 
-        // 30 Verschiedene Monster / Charaktere
-        const MONSTER_DATABASE = [
-            { name: "Goblinsphinx", element: ELEMENTS.ERDE, atk: 1200, def: 800 },
-            { name: "Feuerfunke", element: ELEMENTS.FEUER, atk: 800, def: 500 },
-            { name: "Wasser-Nymphe", element: ELEMENTS.WASSER, atk: 1100, def: 1300 },
-            { name: "Sturmadler", element: ELEMENTS.LUFT, atk: 1400, def: 900 },
-            { name: "Stein-Golem", element: ELEMENTS.ERDE, atk: 1000, def: 2100 },
-            { name: "Seraphim-Lehrling", element: ELEMENTS.ENGEL, atk: 1500, def: 1200 },
-            { name: "Dampf-Roboter", element: ELEMENTS.MASCHINE, atk: 1600, def: 1400 },
-            { name: "Cyber-Drohne", element: ELEMENTS.ELEKTRONIK, atk: 1300, def: 700 },
-            { name: "Schatten-Panther", element: ELEMENTS.SCHATTEN, atk: 1700, def: 1000 },
-            { name: "Jungdrache", element: ELEMENTS.DRACHE, atk: 1800, def: 1100 },
-            { name: "Wüstensoldat", element: ELEMENTS.NORMAL, atk: 1300, def: 1100 },
-            { name: "Magma-Echse", element: ELEMENTS.FEUER, atk: 1900, def: 1200 },
-            { name: "Tiefsee-Krake", element: ELEMENTS.WASSER, atk: 2100, def: 1600 },
-            { name: "Zephyr-Feenritter", element: ELEMENTS.LUFT, atk: 1650, def: 1300 },
-            { name: "Berg-Schildkröte", element: ELEMENTS.ERDE, atk: 800, def: 2400 },
-            { name: "Erzengel Gabriel", element: ELEMENTS.ENGEL, atk: 2300, def: 2000 },
-            { name: "Mecha-Kollos", element: ELEMENTS.MASCHINE, atk: 2500, def: 1800 },
-            { name: "Neon-Impulsiv", element: ELEMENTS.ELEKTRONIK, atk: 1200, def: 1800 },
-            { name: "Nachtmahr", element: ELEMENTS.SCHATTEN, atk: 2000, def: 1500 },
-            { name: "Wyvern der Sturmwinde", element: ELEMENTS.DRACHE, atk: 2200, def: 1700 },
-            { name: "Standard-Garde", element: ELEMENTS.NORMAL, atk: 1000, def: 1000 },
-            { name: "Höllenhund", element: ELEMENTS.FEUER, atk: 1550, def: 800 },
-            { name: "Eis-Elementar", element: ELEMENTS.WASSER, atk: 1400, def: 1700 },
-            { name: "Tornadovogel", element: ELEMENTS.LUFT, atk: 1800, def: 1000 },
-            { name: "Kristall-Skelett", element: ELEMENTS.ERDE, atk: 1100, def: 1900 },
-            { name: "Lichtbringer", element: ELEMENTS.ENGEL, atk: 1900, def: 1900 },
-            { name: "U-Boot-Prototyp", element: ELEMENTS.MASCHINE, atk: 1400, def: 2200 },
-            { name: "Quanten-Glitch", element: ELEMENTS.ELEKTRONIK, atk: 2200, def: 800 },
-            { name: "Schatten-Assassine", element: ELEMENTS.SCHATTEN, atk: 2400, def: 1000 },
-            { name: "Rotäugiger Drachenlord", element: ELEMENTS.DRACHE, atk: 2600, def: 2100 }
-        ];
-
-        // --- GAME ENGINE & SETUP ---
-
-        const BOARD_SIZE = 7; // 7x7 Spielfeld
-        const TILE_SIZE = 2;
-        
-        let scene, camera, renderer, controls;
-        let board = [];
-        let units = [];
-        let selectedUnit = null;
-        let isPlayerTurn = true;
-        let playerBoss = null;
-
-        const raycaster = new THREE.Raycaster();
-        const mouse = new THREE.Vector2();
-
-        init();
-        animate();
-
-        function init() {
-            // Scene Setup
-            scene = new THREE.Scene();
-            scene.background = new THREE.Color(0x0f141d);
-            scene.fog = new THREE.FogExp2(0x0f141d, 0.03);
-
-            // Camera Setup
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 14, 14);
-
-            // Renderer
-            renderer = new THREE.WebGLRenderer({ antialias: true });
-            renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-            document.getElementById('canvas-container').appendChild(renderer.domElement);
-
-            // Controls
-            controls = new THREE.OrbitControls(camera, renderer.domElement);
-            controls.enableDamping = true;
-            controls.dampingFactor = 0.05;
-            controls.maxPolarAngle = Math.PI / 2.1; // Kamera nicht unter Boden zulassen
-
-            // Lights
-            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
-            scene.add(ambientLight);
-
-            const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
-            dirLight.position.set(10, 20, 10);
-            dirLight.castShadow = true;
-            dirLight.shadow.mapSize.width = 2048;
-            dirLight.shadow.mapSize.height = 2048;
-            scene.add(dirLight);
-
-            // Board Generation
-            createWoodenBoard();
-
-            // Event Listeners
-            window.addEventListener('resize', onWindowResize);
-            window.addEventListener('click', onPointerClick);
-
-            // Populate Boss Selection UI
-            setupBossSelectionUI();
-        }
-
-        // Erstelle den Holz-Boden (Normales Feld) & das Grid
-        function createWoodenBoard() {
-            const boardGroup = new THREE.Group();
-            
-            // Textur über Procedural Canvas erstellen (Holzoptik)
-            const woodCanvas = document.createElement('canvas');
-            woodCanvas.width = 256;
-            woodCanvas.height = 256;
-            const ctx = woodCanvas.getContext('2d');
-            ctx.fillStyle = '#8a5a36';
-            ctx.fillRect(0, 0, 256, 256);
-            ctx.fillStyle = '#5c3a21';
-            for(let i=0; i<50; i++) {
-                ctx.fillRect(Math.random()*256, 0, Math.random()*4+1, 256);
+        function getStageInfo(lvl) {
+            for (let stage of evolutionaryStages) {
+                if (lvl <= stage.maxLvl) return stage;
             }
-            const woodTexture = new THREE.CanvasTexture(woodCanvas);
-            woodTexture.wrapS = THREE.RepeatWrapping;
-            woodTexture.wrapT = THREE.RepeatWrapping;
-
-            const offset = (BOARD_SIZE * TILE_SIZE) / 2 - (TILE_SIZE / 2);
-
-            for (let x = 0; x < BOARD_SIZE; x++) {
-                board[x] = [];
-                for (let z = 0; z < BOARD_SIZE; z++) {
-                    const geometry = new THREE.BoxGeometry(TILE_SIZE - 0.1, 0.4, TILE_SIZE - 0.1);
-                    const material = new THREE.MeshStandardMaterial({
-                        map: woodTexture,
-                        roughness: 0.6,
-                        metalness: 0.1
-                    });
-                    
-                    const tile = new THREE.Mesh(geometry, material);
-                    tile.position.set(x * TILE_SIZE - offset, 0, z * TILE_SIZE - offset);
-                    tile.receiveShadow = true;
-                    
-                    tile.userData = { gridX: x, gridZ: z, occupiedBy: null };
-                    
-                    boardGroup.add(tile);
-                    board[x][z] = tile;
-                }
-            }
-
-            // Spielfeld-Rahmen (Dunkles Holz)
-            const frameGeo = new THREE.BoxGeometry(BOARD_SIZE * TILE_SIZE + 0.6, 0.3, BOARD_SIZE * TILE_SIZE + 0.6);
-            const frameMat = new THREE.MeshStandardMaterial({ color: 0x2c1810, roughness: 0.8 });
-            const frame = new THREE.Mesh(frameGeo, frameMat);
-            frame.position.set(0, -0.2, 0);
-            boardGroup.add(frame);
-
-            scene.add(boardGroup);
+            return evolutionaryStages[evolutionaryStages.length - 1];
         }
 
-        // Boss-Auswahl UI
-        function setupBossSelectionUI() {
-            const container = document.getElementById('boss-cards');
-            BOSSES.forEach(boss => {
-                const card = document.createElement('div');
-                card.className = 'boss-card';
-                card.innerHTML = `
-                    <h3>${boss.name}</h3>
-                    <span class="element-tag" style="background:${boss.element.bg}">${boss.element.name}</span>
-                    <div class="stats">
-                        <strong>ATK:</strong> ${boss.atk}<br>
-                        <strong>DEF:</strong> ${boss.def}<br><br>
-                        ${boss.desc}
-                    </div>
-                    <button class="btn-select">Auswählen</button>
-                `;
-                card.onclick = () => startGame(boss);
-                container.appendChild(card);
-            });
-        }
+        // --- THREE.JS SETUP ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x87ceeb); // Himmelsblau
+        scene.fog = new THREE.FogExp2(0x87ceeb, 0.015);
 
-        function startGame(selectedBoss) {
-            playerBoss = selectedBoss;
-            document.getElementById('boss-selection-modal').style.display = 'none';
-            log(`Du hast **${playerBoss.name}** gewählt! Das Duell beginnt.`);
+        const camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        container.appendChild(renderer.domElement);
 
-            // Einheiten platzieren
-            // Spieler-Boss (Unten)
-            spawnUnit(playerBoss.name, playerBoss.element, playerBoss.atk, playerBoss.def, true, 3, 6, true);
-            
-            // Zufällige Monster aus der 30er-Liste für Spieler beschwören (2 Begleiter)
-            const p1 = MONSTER_DATABASE[Math.floor(Math.random() * MONSTER_DATABASE.length)];
-            const p2 = MONSTER_DATABASE[Math.floor(Math.random() * MONSTER_DATABASE.length)];
-            spawnUnit(p1.name, p1.element, p1.atk, p1.def, true, 2, 6);
-            spawnUnit(p2.name, p2.element, p2.atk, p2.def, true, 4, 6);
+        // Lichtquellen
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
 
-            // Gegner-Boss (Oben)
-            const enemyBossData = BOSSES[Math.floor(Math.random() * BOSSES.length)];
-            spawnUnit("Gegner: " + enemyBossData.name, enemyBossData.element, enemyBossData.atk, enemyBossData.def, false, 3, 0, true);
-            
-            // Gegnereinheiten
-            const e1 = MONSTER_DATABASE[Math.floor(Math.random() * MONSTER_DATABASE.length)];
-            const e2 = MONSTER_DATABASE[Math.floor(Math.random() * MONSTER_DATABASE.length)];
-            spawnUnit(e1.name, e1.element, e1.atk, e1.def, false, 2, 0);
-            spawnUnit(e2.name, e2.element, e2.atk, e2.def, false, 4, 0);
-        }
+        const sunLight = new THREE.DirectionalLight(0xfffaed, 0.8);
+        sunLight.position.set(50, 100, 50);
+        sunLight.castShadow = true;
+        scene.add(sunLight);
 
-        // Spielfigur in 3D erstellen
-        function spawnUnit(name, element, atk, def, isPlayer, gridX, gridZ, isBoss = false) {
+        // --- WELT ERSTELLEN (Bäume, Berge, Beute) ---
+        // Boden
+        const groundGeo = new THREE.PlaneGeometry(300, 300, 32, 32);
+        const groundMat = new THREE.MeshStandardMaterial({ color: 0x3b7a57, roughness: 0.9 });
+        const ground = new THREE.Mesh(groundGeo, groundMat);
+        ground.rotation.x = -Math.PI / 2;
+        ground.receiveShadow = true;
+        scene.add(ground);
+
+        // Generiere Bäume & Steine
+        const obstacles = [];
+        const treeGeo = new THREE.ConeGeometry(2, 6, 5);
+        const trunkGeo = new THREE.CylinderGeometry(0.4, 0.6, 2, 5);
+        const treeMat = new THREE.MeshStandardMaterial({ color: 0x1e4620 });
+        const trunkMat = new THREE.MeshStandardMaterial({ color: 0x5c4033 });
+
+        for (let i = 0; i < 80; i++) {
+            const x = (Math.random() - 0.5) * 250;
+            const z = (Math.random() - 0.5) * 250;
+            if (Math.abs(x) < 5 && Math.abs(z) < 5) continue; // Startbereich freihalten
+
             const group = new THREE.Group();
+            const trunk = new THREE.Mesh(trunkGeo, trunkMat);
+            trunk.position.y = 1;
+            trunk.castShadow = true;
+            group.add(trunk);
 
-            // 3D-Körper (Säule + Symbol-Kugel)
-            const baseGeo = new THREE.CylinderGeometry(0.6, 0.7, 0.4, 16);
-            const baseMat = new THREE.MeshStandardMaterial({ 
-                color: isPlayer ? 0x2980b9 : 0xc0392b,
-                metalness: 0.5,
-                roughness: 0.3
-            });
-            const base = new THREE.Mesh(baseGeo, baseMat);
-            base.position.y = 0.2;
-            base.castShadow = true;
-            group.add(base);
+            const leaves = new THREE.Mesh(treeGeo, treeMat);
+            leaves.position.y = 4;
+            leaves.castShadow = true;
+            group.add(leaves);
 
-            // Elementarkristall / Figur oben drauf
-            const size = isBoss ? 0.6 : 0.4;
-            const coreGeo = isBoss ? new THREE.OctahedronGeometry(size) : new THREE.DodecahedronGeometry(size);
-            const coreMat = new THREE.MeshStandardMaterial({ 
-                color: element.color, 
-                roughness: 0.2,
-                metalness: 0.8,
-                emissive: element.color,
-                emissiveIntensity: 0.2
-            });
-            const core = new THREE.Mesh(coreGeo, coreMat);
-            core.position.y = 0.8 + (isBoss ? 0.2 : 0);
-            core.castShadow = true;
-            group.add(core);
-
-            // Positionierung auf dem Board
-            const tile = board[gridX][gridZ];
-            group.position.set(tile.position.x, 0.2, tile.position.z);
-
-            const unitData = {
-                mesh: group,
-                name: name,
-                element: element,
-                atk: atk,
-                def: def,
-                isPlayer: isPlayer,
-                gridX: gridX,
-                gridZ: gridZ,
-                hasMoved: false,
-                isBoss: isBoss
-            };
-
-            group.userData = unitData;
-            tile.userData.occupiedBy = unitData;
-
+            group.position.set(x, 0, z);
             scene.add(group);
-            units.push(unitData);
+            obstacles.push({ x, z, radius: 1.5 });
         }
 
-        // --- LOGIK & STEUERUNG ---
+        // Beute-Objekte (andere Tiere/Nahrung in der Wildnis)
+        const preys = [];
+        const preyGeo = new THREE.SphereGeometry(0.8, 8, 8);
 
-        function onPointerClick(event) {
-            if (!isPlayerTurn) return;
-
-            // Strahl von Kamera zur Mausposition senden
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObjects(scene.children, true);
-
-            if (intersects.length > 0) {
-                let clickedObject = intersects[0].object;
-                
-                // Navigiere zum übergeordneten Group-Objekt, falls vorhanden
-                while (clickedObject.parent && clickedObject.parent !== scene && !clickedObject.userData.gridX && clickedObject.userData.gridX !== 0) {
-                    if (clickedObject.userData.name) break; // Unit Data gefunden
-                    clickedObject = clickedObject.parent;
-                }
-
-                // Check: Ist es eine Einheit?
-                if (clickedObject.userData && clickedObject.userData.atk !== undefined) {
-                    const unit = clickedObject.userData;
-                    selectUnit(unit);
-                    return;
-                }
-
-                // Check: Ist es ein Feld auf dem Boden?
-                if (clickedObject.userData && clickedObject.userData.gridX !== undefined) {
-                    const tile = clickedObject.userData;
-                    if (selectedUnit && selectedUnit.isPlayer && !selectedUnit.hasMoved) {
-                        tryMoveUnit(selectedUnit, tile.gridX, tile.gridZ);
-                    }
-                }
-            }
+        function spawnPrey() {
+            if (preys.length > 25) return;
+            const mat = new THREE.MeshStandardMaterial({ color: 0xf59e0b, roughness: 0.4 });
+            const prey = new THREE.Mesh(preyGeo, mat);
+            prey.position.set(
+                (Math.random() - 0.5) * 220,
+                0.8,
+                (Math.random() - 0.5) * 220
+            );
+            prey.castShadow = true;
+            scene.add(prey);
+            preys.push(prey);
         }
 
-        function selectUnit(unit) {
-            selectedUnit = unit;
-            updateUIInfo(unit);
-            highlightMoves(unit);
+        for (let i = 0; i < 20; i++) spawnPrey();
+
+        // --- SPIELER-FIGUR (LARVE / EVOLUTIONS-TIER) ---
+        const currentStage = getStageInfo(level);
+        const playerMat = new THREE.MeshStandardMaterial({ color: currentStage.color, roughness: 0.3 });
+        const playerGeo = new THREE.SphereGeometry(1, 16, 16);
+        const player = new THREE.Mesh(playerGeo, playerMat);
+        player.position.set(0, 1, 0);
+        player.castShadow = true;
+        scene.add(player);
+
+        // --- DYNAMISCHER TOUCH-JOYSTICK ---
+        const joystickZone = document.getElementById('joystick-zone');
+        const joystickBase = document.getElementById('joystick-base');
+        const joystickStick = document.getElementById('joystick-stick');
+
+        let touchId = null;
+        let startX = 0, startY = 0;
+        let moveX = 0, moveY = 0;
+        const maxDist = 40;
+
+        joystickZone.addEventListener('pointerdown', (e) => {
+            if (touchId !== null) return;
+            touchId = e.pointerId;
+            startX = e.clientX;
+            startY = e.clientY;
+
+            joystickBase.style.display = 'block';
+            joystickBase.style.left = `${startX}px`;
+            joystickBase.style.top = `${startY}px`;
+            joystickStick.style.transform = `translate(0px, 0px)`;
+            joystickZone.setPointerCapture(touchId);
+        });
+
+        joystickZone.addEventListener('pointermove', (e) => {
+            if (e.pointerId !== touchId) return;
+            const dx = e.clientX - startX;
+            const dy = e.clientY - startY;
+            const dist = Math.hypot(dx, dy);
+            const angle = Math.atan2(dy, dx);
+
+            const clampedDist = Math.min(dist, maxDist);
+            moveX = Math.cos(angle) * (clampedDist / maxDist);
+            moveY = Math.sin(angle) * (clampedDist / maxDist);
+
+            joystickStick.style.transform = `translate(${Math.cos(angle) * clampedDist}px, ${Math.sin(angle) * clampedDist}px)`;
+        });
+
+        function resetJoystick(e) {
+            if (e && e.pointerId !== touchId) return;
+            touchId = null;
+            moveX = 0;
+            moveY = 0;
+            joystickBase.style.display = 'none';
         }
 
-        function updateUIInfo(unit) {
-            const container = document.getElementById('unit-info');
-            container.innerHTML = `
-                <strong>${unit.name}</strong> ${unit.isBoss ? '(BOSS)' : ''}<br>
-                <span class="element-tag" style="background:${unit.element.bg}">${unit.element.name}</span><br><br>
-                <strong>ATK:</strong> ${unit.atk} | <strong>DEF:</strong> ${unit.def}<br>
-                <strong>Besitzer:</strong> ${unit.isPlayer ? 'Spieler' : 'Gegner'}<br>
-                <strong>Status:</strong> ${unit.hasMoved ? 'Bereits bewegt' : 'Bereit'}
-            `;
+        joystickZone.addEventListener('pointerup', resetJoystick);
+        joystickZone.addEventListener('pointercancel', resetJoystick);
+
+        // --- SPIEL-LOGIK & GAME LOOP ---
+        const clock = new THREE.Clock();
+        let playerVelocity = new THREE.Vector3();
+
+        function showNotification(text) {
+            const notif = document.getElementById('notification');
+            notif.innerText = text;
+            notif.style.opacity = '1';
+            setTimeout(() => { notif.style.opacity = '0'; }, 1500);
         }
 
-        function highlightMoves(unit) {
-            // Alle Felder zurücksetzen
-            resetHighlights();
+        function updateHUD() {
+            const stage = getStageInfo(level);
+            document.getElementById('creature-name').innerText = `Stufe ${level}: ${stage.name}`;
+            document.getElementById('level-display').innerText = `LVL ${level} / 999`;
+            document.getElementById('exp-bar').style.width = `${(exp / maxExp) * 100}%`;
 
-            if (unit.hasMoved || !unit.isPlayer) return;
-
-            // Regel: Genau 1 Feld weit bewegen (orthogonal oder diagonal)
-            for (let dx = -1; dx <= 1; dx++) {
-                for (let dz = -1; dz <= 1; dz++) {
-                    if (dx === 0 && dz === 0) continue;
-                    const targetX = unit.gridX + dx;
-                    const targetZ = unit.gridZ + dz;
-
-                    if (targetX >= 0 && targetX < BOARD_SIZE && targetZ >= 0 && targetZ < BOARD_SIZE) {
-                        const targetTile = board[targetX][targetZ];
-                        // Gelb = Frei, Rot = Gegner zum Angreifen
-                        if (!targetTile.userData.occupiedBy) {
-                            targetTile.material.color.setHex(0xf1c40f); 
-                        } else if (!targetTile.userData.occupiedBy.isPlayer) {
-                            targetTile.material.color.setHex(0xe74c3c);
-                        }
-                    }
-                }
-            }
+            // Update Spieler-Modell visuell
+            player.scale.setScalar(stage.scale);
+            playerMat.color.setHex(stage.color);
         }
 
-        function resetHighlights() {
-            for (let x = 0; x < BOARD_SIZE; x++) {
-                for (let z = 0; z < BOARD_SIZE; z++) {
-                    board[x][z].material.color.setHex(0xffffff);
-                }
-            }
-        }
-
-        // Bewegung & Kampf ausführen (1 Feld pro Zug)
-        function tryMoveUnit(unit, targetX, targetZ) {
-            const distanceX = Math.abs(unit.gridX - targetX);
-            const distanceZ = Math.abs(unit.gridZ - targetZ);
-
-            // Bewegungseinschränkung: maximal 1 Feld
-            if (distanceX <= 1 && distanceZ <= 1 && !(distanceX === 0 && distanceZ === 0)) {
-                const targetTile = board[targetX][targetZ];
-                const occupant = targetTile.userData.occupiedBy;
-
-                if (occupant) {
-                    // Kampf auslösen, falls ein Gegner auf dem Feld steht
-                    if (occupant.isPlayer !== unit.isPlayer) {
-                        resolveBattle(unit, occupant, targetX, targetZ);
-                    }
-                } else {
-                    // Normales Bewegen auf ein freies Feld
-                    moveUnitToTile(unit, targetX, targetZ);
-                }
-
-                resetHighlights();
-            }
-        }
-
-        function moveUnitToTile(unit, targetX, targetZ) {
-            // Altes Feld leeren
-            board[unit.gridX][unit.gridZ].userData.occupiedBy = null;
-
-            // Neue Position setzen
-            unit.gridX = targetX;
-            unit.gridZ = targetZ;
-            const targetTile = board[targetX][targetZ];
-            targetTile.userData.occupiedBy = unit;
-
-            // Simple Animation
-            unit.mesh.position.set(targetTile.position.x, 0.2, targetTile.position.z);
-            unit.hasMoved = true;
-            log(`${unit.name} bewegt sich auf Feld (${targetX}, ${targetZ}).`);
-            updateUIInfo(unit);
-        }
-
-        // Kampf-System
-        function resolveBattle(attacker, defender, targetX, targetZ) {
-            log(`⚔️ **${attacker.name}** (${attacker.atk} ATK) greift **${defender.name}** (${defender.def} DEF) an!`);
-
-            if (attacker.atk > defender.def) {
-                log(`💥 **${defender.name}** wurde zerstört!`);
-                removeUnit(defender);
-                moveUnitToTile(attacker, targetX, targetZ);
-            } else if (attacker.atk < defender.def) {
-                log(`🛡️ **${defender.name}** hält stand! **${attacker.name}** erleidet Rückstoß und wird zerstört.`);
-                removeUnit(attacker);
+        function addExp(amount) {
+            if (level >= 999) return;
+            exp += amount;
+            if (exp >= maxExp) {
+                exp = 0;
+                level++;
+                maxExp = Math.floor(maxExp * 1.15);
+                showNotification(`LEVEL UP! STUFE ${level}`);
+                updateHUD();
             } else {
-                log(`⚖️ Unentschieden! Beide Einheiten wurden zerstört.`);
-                removeUnit(defender);
-                removeUnit(attacker);
+                updateHUD();
             }
-        }
-
-        function removeUnit(unit) {
-            board[unit.gridX][unit.gridZ].userData.occupiedBy = null;
-            scene.remove(unit.mesh);
-            units = units.filter(u => u !== unit);
-
-            if (unit.isBoss) {
-                const winner = unit.isPlayer ? "Der Gegner" : "Du hast";
-                alert(`${winner} gewonnen! Der Boss wurde vernichtet.`);
-                location.reload();
-            }
-        }
-
-        // Zug beenden
-        function endTurn() {
-            if (!isPlayerTurn) return;
-
-            isPlayerTurn = false;
-            document.getElementById('turn-indicator').innerText = "Zug: Gegner";
-            document.getElementById('turn-indicator').style.color = "#ff4757";
-            
-            resetHighlights();
-            log("--- Zug beendet. Gegner ist am Zug ---");
-
-            setTimeout(enemyAI, 1000);
-        }
-
-        // KI des Gegners (Einfache Zug-Logik)
-        function enemyAI() {
-            const enemyUnits = units.filter(u => !u.isPlayer);
-
-            enemyUnits.forEach(unit => {
-                // Versuche ein Feld nach vorne (Richtung Spieler) zu ziehen
-                let targetZ = Math.min(BOARD_SIZE - 1, unit.gridZ + 1);
-                let targetX = unit.gridX;
-
-                // Falls Feld besetzt, suche nach Kampf oder Ausweichfeld
-                const targetTile = board[targetX][targetZ];
-                if (!targetTile.userData.occupiedBy || targetTile.userData.occupiedBy.isPlayer) {
-                    tryMoveUnit(unit, targetX, targetZ);
-                }
-            });
-
-            // Vorbereitung auf Spielerzug
-            units.forEach(u => u.hasMoved = false);
-            isPlayerTurn = true;
-            document.getElementById('turn-indicator').innerText = "Zug: Spieler";
-            document.getElementById('turn-indicator').style.color = "#2ed573";
-            log("--- Du bist wieder am Zug! ---");
-        }
-
-        function log(message) {
-            const logPanel = document.getElementById('log-panel');
-            const entry = document.createElement('div');
-            entry.style.marginBottom = "4px";
-            entry.innerHTML = message;
-            logPanel.appendChild(entry);
-            logPanel.scrollTop = logPanel.scrollHeight;
-        }
-
-        function onWindowResize() {
-            camera.aspect = window.innerWidth / window.innerHeight;
-            camera.updateProjectionMatrix();
-            renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
         function animate() {
             requestAnimationFrame(animate);
 
-            // Animation der Einheiten (Sanftes Schweben/Rotieren)
-            units.forEach(unit => {
-                const coreMesh = unit.mesh.children[1];
-                if (coreMesh) {
-                    coreMesh.rotation.y += 0.02;
-                }
-            });
+            const dt = clock.getDelta();
 
-            controls.update();
+            // Bewegungsberechnung
+            const speed = 8 * Math.max(0.6, 2 / getStageInfo(level).scale);
+            const targetVelX = moveX * speed;
+            const targetVelZ = moveY * speed;
+
+            player.position.x += targetVelX * dt;
+            player.position.z += targetVelZ * dt;
+
+            // Weltbegrenzung
+            player.position.x = Math.max(-140, Math.min(140, player.position.x));
+            player.position.z = Math.max(-140, Math.min(140, player.position.z));
+
+            // Kollision mit Hindernissen (Bäumen)
+            for (let obs of obstacles) {
+                const dx = player.position.x - obs.x;
+                const dz = player.position.z - obs.z;
+                const dist = Math.hypot(dx, dz);
+                const currentRadius = getStageInfo(level).scale * 0.8 + obs.radius;
+                if (dist < currentRadius) {
+                    player.position.x -= (dx / dist) * (currentRadius - dist);
+                    player.position.z -= (dz / dist) * (currentRadius - dist);
+                }
+            }
+
+            // Kollision mit Beute / anderen Tieren (Schaden zufügen & fressen)
+            for (let i = preys.length - 1; i >= 0; i--) {
+                const prey = preys[i];
+                const dist = player.position.distanceTo(prey.position);
+                const eatRange = getStageInfo(level).scale * 0.8 + 0.8;
+
+                if (dist < eatRange) {
+                    scene.remove(prey);
+                    preys.splice(i, 1);
+                    addExp(3);
+                    spawnPrey();
+                }
+            }
+
+            // Kamera-Verfolgung (sanft)
+            const stageScale = getStageInfo(level).scale;
+            const targetCamPos = new THREE.Vector3(
+                player.position.x,
+                player.position.y + 5 + stageScale * 1.5,
+                player.position.z + 8 + stageScale * 2.5
+            );
+            camera.position.lerp(targetCamPos, 0.1);
+            camera.lookAt(player.position.x, player.position.y, player.position.z);
+
             renderer.render(scene, camera);
         }
+
+        // Responsives Fenster
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        updateHUD();
+        animate();
     </script>
 </body>
 </html>
