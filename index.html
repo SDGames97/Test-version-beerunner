@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Taktik der Rosen - Next-Gen Edition</title>
     
-    <!-- PWA Meta Tags -->
+    <!-- PWA Web App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
@@ -127,7 +127,7 @@
             <div class="glass-panel p-6 rounded-3xl max-w-2xl w-full text-center border border-amber-500/30 shadow-2xl space-y-4">
                 <h2 class="text-xl font-bold text-amber-400">Wähle ein Level (1 - 15)</h2>
                 <div id="level-grid" class="grid grid-cols-5 gap-3 max-h-80 overflow-y-auto p-2">
-                    <!-- 15 Levels dynamically generated -->
+                    <!-- Levels generated -->
                 </div>
                 <button onclick="backToMainMenu()" class="glass-panel px-6 py-2 rounded-xl text-slate-300 hover:bg-slate-800">
                     Zurück zum Hauptmenü
@@ -192,7 +192,7 @@
 
         <!-- CENTER MESSAGE FEED -->
         <div id="game-ui-msg" class="hidden self-center glass-panel px-5 py-2 rounded-full text-xs text-amber-200 text-center shadow-2xl pointer-events-none max-w-lg border border-amber-500/30">
-            <span id="game-message" class="glow-text">Wähle eine Handkarte und platziere sie auf einem blauen Feld!</span>
+            <span id="game-message" class="glow-text">Wähle eine Handkarte oder bewege eine deiner Einheiten!</span>
         </div>
 
         <!-- IN-GAME BOTTOM HAND -->
@@ -250,7 +250,7 @@
             }
         }
 
-        // --- GAME CONSTANTS & 15 GENERATED MAP LEVELS ---
+        // --- GAME CONSTANTS & MAP GENERATOR ---
         const TERRAIN = {
             NORMAL: { name: 'Normal', color: 0x475569, roughness: 0.6, metalness: 0.1 },
             FIRE: { name: 'Feuer', color: 0xef4444, emissive: 0xb91c1c, roughness: 0.3, metalness: 0.2 },
@@ -273,7 +273,6 @@
             { id: 8, name: 'Schatten-Krabbler', type: CARD_TYPES.BEAST, atk: 1100, def: 800 }
         ];
 
-        // Generator for 15 levels with varying themes
         function generateLevels() {
             const levels = [];
             for (let l = 1; l <= 15; l++) {
@@ -281,19 +280,17 @@
                 for (let y = 0; y < 8; y++) {
                     const row = [];
                     for (let x = 0; x < 8; x++) {
-                        // Protect spawn zones (3,7) & (4,0)
                         if ((x === 3 && y === 7) || (x === 4 && y === 0)) {
                             row.push(0);
                             continue;
                         }
-                        // Level specific terrain distribution
                         let rand = Math.random();
-                        if (l <= 3) row.push(rand > 0.8 ? 4 : rand > 0.6 ? 3 : 0); // Grass/Rock
-                        else if (l <= 6) row.push(rand > 0.7 ? 1 : rand > 0.5 ? 4 : 0); // Lava focus
-                        else if (l <= 9) row.push(rand > 0.7 ? 2 : rand > 0.5 ? 5 : 0); // Water/Abyss
-                        else row.push(Math.floor(Math.random() * 6)); // Chaos Mischmasch
+                        if (l <= 3) row.push(rand > 0.8 ? 4 : rand > 0.6 ? 3 : 0);
+                        else if (l <= 6) row.push(rand > 0.7 ? 1 : rand > 0.5 ? 4 : 0);
+                        else if (l <= 9) row.push(rand > 0.7 ? 2 : rand > 0.5 ? 5 : 0);
+                        else row.push(Math.floor(Math.random() * 6));
                     }
-                    row.push(row);
+                    map.push(row);
                 }
                 levels.push(map);
             }
@@ -302,9 +299,10 @@
 
         const LEVEL_MAPS = generateLevels();
 
-        // --- GAME STATE & FPS ENGINE ---
+        // --- GAME STATE ---
         let scene, camera, renderer, raycaster, mouse;
         let boardGrid = [], boardMeshes = [], unitMeshes = [];
+        let smokeParticles = [];
         let playerHand = [];
         let playerName = "Spieler 1";
         let currentLevel = 1;
@@ -415,13 +413,15 @@
 
             buildLevelBoard(lvlIndex - 1);
             spawnLeaders();
+            resetTurnFlags();
             updateUI();
             setMessage(`Level ${currentLevel} gestartet! Du bist am Zug.`);
         }
 
         function buildLevelBoard(levelIdx) {
-            // Clear existing board
             boardMeshes.forEach(row => row.forEach(m => scene.remove(m)));
+            smokeParticles.forEach(p => scene.remove(p));
+            smokeParticles = [];
             boardGrid = [];
             boardMeshes = [];
 
@@ -444,23 +444,57 @@
                     boardGrid[x][y] = { x, y, terrain: t, unit: null };
 
                     let geom = new THREE.BoxGeometry(size * 0.95, t === TERRAIN.ROCK ? 0.8 : 0.18, size * 0.95);
-                    let mat = new THREE.MeshStandardMaterial({ color: t.color, roughness: t.roughness, metalness: t.metalness });
+                    let mat = new THREE.MeshStandardMaterial({ 
+                        color: t.color, 
+                        roughness: t.roughness, 
+                        metalness: t.metalness,
+                        emissive: t.emissive || 0x000000,
+                        emissiveIntensity: t.emissive ? 0.5 : 0
+                    });
 
                     const mesh = new THREE.Mesh(geom, mat);
-                    mesh.position.set(offset + x * size, t === TERRAIN.ROCK ? 0.4 : 0, offset + y * size);
+                    const posX = offset + x * size;
+                    const posZ = offset + y * size;
+                    mesh.position.set(posX, t === TERRAIN.ROCK ? 0.4 : 0, posZ);
                     mesh.receiveShadow = true;
                     mesh.userData = { gridX: x, gridY: y, isTile: true };
 
                     scene.add(mesh);
                     boardMeshes[x][y] = mesh;
+
+                    // QUALMEFFEKTE FÜR FEUERFELDER
+                    if (t === TERRAIN.FIRE) {
+                        for (let p = 0; p < 2; p++) {
+                            const pGeo = new THREE.DodecahedronGeometry(0.08 + Math.random() * 0.05);
+                            const pMat = new THREE.MeshBasicMaterial({
+                                color: 0x444444,
+                                transparent: true,
+                                opacity: 0.4
+                            });
+                            const pMesh = new THREE.Mesh(pGeo, pMat);
+                            pMesh.position.set(posX + (Math.random() - 0.5) * 0.8, 0.3 + Math.random() * 0.5, posZ + (Math.random() - 0.5) * 0.8);
+                            scene.add(pMesh);
+                            smokeParticles.push({ mesh: pMesh, originY: pMesh.position.y });
+                        }
+                    }
                 }
             }
         }
 
         function spawnLeaders() {
-            boardGrid[3][7].unit = { name: 'Königlicher Paladin', atk: 2000, def: 2000, owner: 'player', isLeader: true };
-            boardGrid[4][0].unit = { name: 'Schatten-Imperator', atk: 2000, def: 2000, owner: 'enemy', isLeader: true };
+            boardGrid[3][7].unit = { name: 'Königlicher Paladin', atk: 2000, def: 2000, owner: 'player', isLeader: true, hasMoved: false };
+            boardGrid[4][0].unit = { name: 'Schatten-Imperator', atk: 2000, def: 2000, owner: 'enemy', isLeader: true, hasMoved: false };
             renderUnits();
+        }
+
+        function resetTurnFlags() {
+            for (let x = 0; x < 8; x++) {
+                for (let y = 0; y < 8; y++) {
+                    if (boardGrid[x][y].unit) {
+                        boardGrid[x][y].unit.hasMoved = false;
+                    }
+                }
+            }
         }
 
         function renderUnits() {
@@ -478,7 +512,7 @@
 
                         const baseGeo = new THREE.CylinderGeometry(0.4, 0.45, 0.25, 32);
                         const baseMat = new THREE.MeshStandardMaterial({
-                            color: unit.owner === 'player' ? 0x2563eb : 0xdc2626,
+                            color: unit.owner === 'player' ? (unit.hasMoved ? 0x64748b : 0x2563eb) : 0xdc2626,
                             metalness: 0.6, roughness: 0.2
                         });
                         const baseMesh = new THREE.Mesh(baseGeo, baseMat);
@@ -506,7 +540,7 @@
             }
         }
 
-        // --- 1-FELD BEWEGUNG & TOUCH-INTERAKTION ---
+        // --- STRIKTE 1-BEWEGUNG PRO RUNDE RULE & INTERACTION ---
         function handlePointerDown(e) {
             if (e.clientY > window.innerHeight - 170 || e.clientY < 70) return;
 
@@ -550,7 +584,7 @@
                     }
 
                     const card = playerHand[selectedHandIndex];
-                    target.unit = { name: card.name, atk: card.atk, def: card.def, owner: 'player' };
+                    target.unit = { name: card.name, atk: card.atk, def: card.def, owner: 'player', hasMoved: true }; // Neu beschworene Monster dürfen erst nächste Runde bewegen!
 
                     playerHand.splice(selectedHandIndex, 1);
                     selectedHandIndex = null;
@@ -567,8 +601,12 @@
                 return;
             }
 
-            // 2. EINHEIT AUSWÄHLEN
+            // 2. EINHEIT AUSWÄHLEN (PRÜFUNG OB DIESE RUNDE BEREITS BEWEGT)
             if (target.unit && target.unit.owner === 'player') {
+                if (target.unit.hasMoved) {
+                    setMessage(`"${target.unit.name}" wurde in diesem Zug bereits bewegt!`);
+                    return;
+                }
                 selectedFieldUnit = { x, y };
                 playSound('select');
                 highlightMoveFields(x, y);
@@ -576,23 +614,19 @@
                 return;
             }
 
-            // 3. MAXIMAL 1 FELD BEWEGEN / ANGREIFEN
+            // 3. MAXIMAL 1 FELD BEWEGEN ODER ANGREIFEN
             if (selectedFieldUnit) {
                 const sx = selectedFieldUnit.x, sy = selectedFieldUnit.y;
-                
-                // EXAKTE 1-FELD DISTANZPRÜFUNG (Horizontal oder Vertikal)
-                const dx = Math.abs(x - sx);
-                const dy = Math.abs(y - sy);
-                const dist = dx + dy;
+                const dist = Math.abs(x - sx) + Math.abs(y - sy);
 
-                if (dist === 1 && target.terrain !== TERRAIN.ROCK) { // EXAKT 1 FELD!
+                if (dist === 1 && target.terrain !== TERRAIN.ROCK) { // EXAKT 1 FELD
                     const myUnit = boardGrid[sx][sy].unit;
 
                     if (target.unit && target.unit.owner === 'enemy') {
                         playSound('attack');
                         if (target.unit.isLeader) {
                             enemyLP -= myUnit.atk;
-                            setMessage(`Direktangriff! -${myUnit.atk} LP`);
+                            setMessage(`Direktangriff auf Anführer! -${myUnit.atk} LP`);
                             if (enemyLP <= 0) {
                                 alert(`SIEG! Level ${currentLevel} abgeschlossen!`);
                                 backToMainMenu();
@@ -600,6 +634,7 @@
                         } else {
                             if (myUnit.atk >= target.unit.atk) {
                                 setMessage(`Gegnerisches "${target.unit.name}" vernichtet!`);
+                                myUnit.hasMoved = true;
                                 target.unit = myUnit;
                                 boardGrid[sx][sy].unit = null;
                             } else {
@@ -613,6 +648,7 @@
                             boardGrid[sx][sy].unit = null;
                         } else {
                             playSound('select');
+                            myUnit.hasMoved = true; // JETZT FÜR DIESEN ZUG GESPERRT!
                             target.unit = myUnit;
                             boardGrid[sx][sy].unit = null;
                             setMessage("Einheit 1 Feld bewegt.");
@@ -643,7 +679,6 @@
 
         function highlightMoveFields(sx, sy) {
             resetHighlights();
-            // Nur direkte 4 Nachbarfelder (1 Feld Entfernung)
             [[0,1], [0,-1], [1,0], [-1,0]].forEach(d => {
                 const nx = sx + d[0], ny = sy + d[1];
                 if (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
@@ -691,7 +726,6 @@
         }
 
         function executeAITurn() {
-            // KI bewegt Monster maximal 1 Feld
             for (let x = 0; x < 8; x++) {
                 for (let y = 0; y < 8; y++) {
                     const u = boardGrid[x][y].unit;
@@ -707,9 +741,10 @@
 
             isPlayerTurn = true;
             playerSP = maxSP;
+            resetTurnFlags(); // SPERREN FÜR SPIELER FÜR DEN NEUEN ZUG AUFHEBEN!
             renderUnits();
             updateUI();
-            setMessage("Dein Zug!");
+            setMessage("Dein Zug! Deine Einheiten können wieder bewegt werden.");
         }
 
         function updateUI() {
@@ -749,7 +784,6 @@
             renderer.setSize(window.innerWidth, window.innerHeight);
         }
 
-        // --- FPS CONTROLLED RENDER LOOP ---
         function animate(now) {
             requestAnimationFrame(animate);
 
@@ -758,6 +792,16 @@
 
             if (delta >= interval) {
                 lastFrameTime = now - (delta % interval);
+
+                // QUALM PARTICLES ANIMATION
+                smokeParticles.forEach(p => {
+                    p.mesh.position.y += 0.005;
+                    p.mesh.rotation.y += 0.01;
+                    if (p.mesh.position.y > p.originY + 0.6) {
+                        p.mesh.position.y = p.originY;
+                    }
+                });
+
                 renderer.render(scene, camera);
             }
         }
