@@ -3,14 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Taktik der Rosen - 32-Bit Edition</title>
+    <title>Taktik der Rosen - Next-Gen Edition</title>
     
     <!-- PWA Web App Meta Tags -->
     <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="Taktik Rosen">
-    <meta name="theme-color" content="#090d16">
+    <meta name="theme-color" content="#030712">
 
     <!-- Tailwind CSS & Three.js -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -21,8 +21,8 @@
             margin: 0;
             padding: 0;
             overflow: hidden;
-            background-color: #090d16;
-            font-family: 'Courier New', Courier, monospace; /* Retro Pixel Vibe */
+            background-color: #030712;
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             user-select: none;
             -webkit-user-select: none;
             touch-action: manipulation;
@@ -47,75 +47,92 @@
         .interactive {
             pointer-events: auto;
         }
-        .pixel-border {
-            border: 3px solid #3b82f6;
-            box-shadow: 4px 4px 0px #000;
+        .glass-panel {
+            background: rgba(15, 23, 42, 0.75);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
-        .pixel-card {
-            border: 2px solid #64748b;
-            box-shadow: 3px 3px 0px #000;
+        .glass-card {
+            background: linear-gradient(135deg, rgba(30, 41, 59, 0.9), rgba(15, 23, 42, 0.95));
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.5);
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .glass-card:hover {
+            transform: translateY(-6px) scale(1.02);
+            border-color: rgba(245, 158, 11, 0.5);
+            box-shadow: 0 20px 30px -10px rgba(245, 158, 11, 0.3);
         }
         .selected-card {
-            border: 3px solid #eab308 !important;
-            box-shadow: 0 0 15px #eab308, 3px 3px 0px #000 !important;
-            transform: translateY(-6px);
+            border: 2px solid #f59e0b !important;
+            box-shadow: 0 0 25px rgba(245, 158, 11, 0.6), 0 20px 30px -10px rgba(0, 0, 0, 0.7) !important;
+            transform: translateY(-8px);
+        }
+        @keyframes pulseGlow {
+            0%, 100% { opacity: 0.6; }
+            50% { opacity: 1; }
+        }
+        .glow-text {
+            animation: pulseGlow 2s infinite ease-in-out;
         }
     </style>
 </head>
 <body class="text-white relative">
 
-    <!-- 3D Canvas -->
+    <!-- High-End 3D Canvas -->
     <div id="canvas-container"></div>
 
     <!-- UI Overlay Layer -->
-    <div class="ui-layer flex flex-col justify-between p-3">
+    <div class="ui-layer flex flex-col justify-between p-4">
         
-        <!-- TOP: Status Bar -->
-        <div class="flex justify-between items-center bg-slate-900/90 p-2 rounded-lg border-2 border-slate-700 shadow-2xl interactive">
+        <!-- TOP: Glassmorphism Status Bar -->
+        <div class="flex justify-between items-center glass-panel p-3.5 rounded-2xl shadow-2xl interactive">
             <div>
-                <h1 class="text-xs sm:text-sm font-bold text-amber-400 tracking-wider">TAKTIK DER ROSEN</h1>
-                <p id="turn-indicator" class="text-[10px] text-slate-300">Dein Zug</p>
+                <h1 class="text-sm sm:text-base font-extrabold text-amber-400 tracking-wider">TAKTIK DER ROSEN</h1>
+                <p id="turn-indicator" class="text-xs text-slate-300 font-medium">Dein Zug (Beschwörungsphase)</p>
             </div>
-            <div class="flex gap-2 text-center text-[10px] sm:text-xs">
-                <div class="bg-slate-800 px-2 py-1 rounded border border-slate-600">
-                    <span class="text-slate-400 block">SPIELER LP</span>
-                    <span id="player-lp" class="font-bold text-emerald-400">4000</span>
+            <div class="flex gap-3 text-center">
+                <div class="glass-panel px-3 py-1.5 rounded-xl border border-white/5">
+                    <span class="text-[10px] text-slate-400 block tracking-wider">SPIELER LP</span>
+                    <span id="player-lp" class="font-bold text-emerald-400 text-sm sm:text-base">4000</span>
                 </div>
-                <div class="bg-slate-800 px-2 py-1 rounded border border-slate-600">
-                    <span class="text-slate-400 block">SP</span>
-                    <span id="player-sp" class="font-bold text-amber-300">3/3</span>
+                <div class="glass-panel px-3 py-1.5 rounded-xl border border-white/5">
+                    <span class="text-[10px] text-slate-400 block tracking-wider">SP</span>
+                    <span id="player-sp" class="font-bold text-amber-300 text-sm sm:text-base">3 / 3</span>
                 </div>
-                <div class="bg-slate-800 px-2 py-1 rounded border border-slate-600">
-                    <span class="text-slate-400 block">GEGNER LP</span>
-                    <span id="enemy-lp" class="font-bold text-rose-400">4000</span>
+                <div class="glass-panel px-3 py-1.5 rounded-xl border border-white/5">
+                    <span class="text-[10px] text-slate-400 block tracking-wider">GEGNER LP</span>
+                    <span id="enemy-lp" class="font-bold text-rose-400 text-sm sm:text-base">4000</span>
                 </div>
             </div>
             <div>
-                <button id="end-turn-btn" onclick="endPlayerTurn()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold text-xs px-3 py-1.5 rounded pixel-border active:scale-95 transition">
+                <button id="end-turn-btn" onclick="endPlayerTurn()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs sm:text-sm px-4 py-2 rounded-xl shadow-lg transition transform active:scale-95">
                     Zug Beenden
                 </button>
             </div>
         </div>
 
-        <!-- CENTER: Game Message Feed -->
-        <div class="self-center bg-slate-950/80 border border-slate-700 px-3 py-1.5 rounded text-[11px] text-amber-200 text-center shadow-lg pointer-events-none max-w-md">
-            <span id="game-message">Klicke eine Karte oder eine Einheit auf dem Feld an!</span>
+        <!-- CENTER: Cinematic Message Banner -->
+        <div class="self-center glass-panel px-5 py-2 rounded-full text-xs sm:text-sm text-amber-200 text-center shadow-2xl pointer-events-none max-w-lg border border-amber-500/30">
+            <span id="game-message" class="glow-text">Wähle eine Handkarte und platziere sie auf einem blauen Feld!</span>
         </div>
 
-        <!-- BOTTOM: Hand Cards Container -->
+        <!-- BOTTOM: Glassmorphic Hand Cards -->
         <div class="interactive flex flex-col items-center">
-            <div id="hand-container" class="flex justify-center gap-2 overflow-x-auto py-2 px-3 bg-slate-900/95 rounded-xl border-2 border-slate-700 max-w-3xl w-full">
+            <div id="hand-container" class="flex justify-center gap-3 overflow-x-auto py-3 px-4 glass-panel rounded-2xl max-w-4xl w-full shadow-2xl">
                 <!-- Cards render dynamically -->
             </div>
         </div>
 
     </div>
 
-    <!-- JavaScript & Game Logic -->
+    <!-- Next-Gen Game Script -->
     <script>
-        // --- 32-BIT SOUND SYNTHESIZER ---
+        // --- AUDIO SYNTHESIS (Cinematic Web Audio) ---
         const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-        function playRetroSound(type) {
+        function playCinematicSound(type) {
             if (audioCtx.state === 'suspended') audioCtx.resume();
             const osc = audioCtx.createOscillator();
             const gain = audioCtx.createGain();
@@ -124,40 +141,40 @@
             const now = audioCtx.currentTime;
 
             if (type === 'select') {
-                osc.type = 'square';
-                osc.frequency.setValueAtTime(440, now);
-                osc.frequency.setValueAtTime(880, now + 0.05);
-                gain.gain.setValueAtTime(0.15, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.1);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(300, now);
+                osc.frequency.exponentialRampToValueAtTime(600, now + 0.15);
+                gain.gain.setValueAtTime(0.2, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.15);
                 osc.start(now);
-                osc.stop(now + 0.1);
+                osc.stop(now + 0.15);
             } else if (type === 'summon') {
                 osc.type = 'triangle';
-                osc.frequency.setValueAtTime(200, now);
-                osc.frequency.exponentialRampToValueAtTime(600, now + 0.25);
+                osc.frequency.setValueAtTime(150, now);
+                osc.frequency.exponentialRampToValueAtTime(800, now + 0.4);
                 gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.4);
                 osc.start(now);
-                osc.stop(now + 0.25);
+                osc.stop(now + 0.4);
             } else if (type === 'attack') {
                 osc.type = 'sawtooth';
-                osc.frequency.setValueAtTime(180, now);
-                osc.frequency.linearRampToValueAtTime(60, now + 0.2);
-                gain.gain.setValueAtTime(0.3, now);
-                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.2);
+                osc.frequency.setValueAtTime(250, now);
+                osc.frequency.linearRampToValueAtTime(50, now + 0.3);
+                gain.gain.setValueAtTime(0.35, now);
+                gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
                 osc.start(now);
-                osc.stop(now + 0.2);
+                osc.stop(now + 0.3);
             }
         }
 
-        // --- GAME CONSTANTS & DATA ---
+        // --- GAME DATA & CONFIG ---
         const TERRAIN = {
-            NORMAL: { name: 'Normal', color: 0x64748b },
-            FIRE: { name: 'Feuer', color: 0xd97706 },
-            WATER: { name: 'Wasser', color: 0x0284c7 },
-            EARTH: { name: 'Erde', color: 0x15803d },
-            ROCK: { name: 'Felsen', color: 0x334155 },
-            ABYSS: { name: 'Abgrund', color: 0x6b21a8 }
+            NORMAL: { name: 'Normal', color: 0x475569, roughness: 0.6, metalness: 0.1 },
+            FIRE: { name: 'Feuer', color: 0xef4444, emissive: 0xb91c1c, roughness: 0.3, metalness: 0.2 },
+            WATER: { name: 'Wasser', color: 0x0284c7, roughness: 0.1, metalness: 0.8 },
+            EARTH: { name: 'Erde', color: 0x15803d, roughness: 0.8, metalness: 0.05 },
+            ROCK: { name: 'Felsen', color: 0x1e293b, roughness: 0.9, metalness: 0.4 },
+            ABYSS: { name: 'Abgrund', color: 0x581c87, emissive: 0x3b0764, roughness: 0.4, metalness: 0.5 }
         };
 
         const CARD_TYPES = { FIRE: 'Feuer', WATER: 'Wasser', EARTH: 'Erde', WARRIOR: 'Krieger', BEAST: 'Bestie' };
@@ -184,51 +201,64 @@
             [4, 2, 2, 0, 0, 1, 1, 4]
         ];
 
-        // --- GAME STATE ---
         let scene, camera, renderer, raycaster, mouse;
-        let boardGrid = [];
-        let boardMeshes = [];
-        let unitMeshes = [];
+        let boardGrid = [], boardMeshes = [], unitMeshes = [];
         let playerHand = [];
         let playerLP = 4000, enemyLP = 4000;
         let playerSP = 3, maxSP = 3;
         let isPlayerTurn = true;
-
         let selectedHandIndex = null;
-        let selectedFieldUnit = null; // {x, y}
+        let selectedFieldUnit = null;
 
         function init() {
             const container = document.getElementById('canvas-container');
 
             scene = new THREE.Scene();
-            scene.fog = new THREE.FogExp2(0x090d16, 0.04);
+            scene.fog = new THREE.FogExp2(0x030712, 0.025);
 
-            camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 1000);
-            camera.position.set(0, 13, 10);
+            camera = new THREE.PerspectiveCamera(40, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(0, 15, 12);
             camera.lookAt(0, 0, 0);
 
-            // 32-Bit Low-Poly / Retro Renderer Config
-            renderer = new THREE.WebGLRenderer({ antialias: false });
+            // High-End Renderer Setup
+            renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: "high-performance" });
             renderer.setSize(window.innerWidth, window.innerHeight);
-            renderer.setPixelRatio(1); // Intentional retro resolution
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
             renderer.shadowMap.enabled = true;
-            renderer.shadowMap.type = THREE.BasicShadowMap;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
             container.appendChild(renderer.domElement);
 
-            // Lighting
-            const ambLight = new THREE.AmbientLight(0xffffff, 0.8);
-            scene.add(ambLight);
+            // Cinematic Studio Lighting
+            const ambientLight = new THREE.AmbientLight(0x1e293b, 1.2);
+            scene.add(ambientLight);
 
-            const dirLight = new THREE.DirectionalLight(0xfffaed, 0.8);
-            dirLight.position.set(5, 15, 5);
-            dirLight.castShadow = true;
-            scene.add(dirLight);
+            const sunLight = new THREE.DirectionalLight(0xfffbeb, 2.0);
+            sunLight.position.set(10, 25, 15);
+            sunLight.castShadow = true;
+            sunLight.shadow.mapSize.width = 2048;
+            sunLight.shadow.mapSize.height = 2048;
+            sunLight.shadow.camera.near = 0.5;
+            sunLight.shadow.camera.far = 50;
+            const d = 10;
+            sunLight.shadow.camera.left = -d;
+            sunLight.shadow.camera.right = d;
+            sunLight.shadow.camera.top = d;
+            sunLight.shadow.camera.bottom = -d;
+            sunLight.shadow.bias = -0.0005;
+            scene.add(sunLight);
+
+            // Accent Rim Light
+            const rimLight = new THREE.DirectionalLight(0x38bdf8, 1.0);
+            rimLight.position.set(-10, 15, -15);
+            scene.add(rimLight);
 
             raycaster = new THREE.Raycaster();
             mouse = new THREE.Vector2();
 
-            setupGameData();
-            build3DBoard();
+            playerHand = [...DECK_DATA.slice(0, 4)];
+            buildHighEndBoard();
             spawnLeaders();
             updateUI();
 
@@ -238,11 +268,7 @@
             animate();
         }
 
-        function setupGameData() {
-            playerHand = [...DECK_DATA.slice(0, 4)];
-        }
-
-        function build3DBoard() {
+        function buildHighEndBoard() {
             const size = 1.2;
             const offset = -3.5 * size;
 
@@ -260,16 +286,28 @@
 
                     boardGrid[x][y] = { x, y, terrain: t, unit: null };
 
-                    // 32-Bit Low-Poly Tile Meshes
-                    let geom = new THREE.BoxGeometry(size * 0.92, 0.2, size * 0.92);
+                    let geom, mat;
                     if (t === TERRAIN.ROCK) {
-                        geom = new THREE.BoxGeometry(size * 0.92, 0.8, size * 0.92);
+                        geom = new THREE.ConeGeometry(0.55, 1.4, 6);
+                        mat = new THREE.MeshStandardMaterial({ color: t.color, roughness: t.roughness, metalness: t.metalness });
+                    } else if (t === TERRAIN.WATER) {
+                        geom = new THREE.BoxGeometry(size * 0.95, 0.12, size * 0.95);
+                        mat = new THREE.MeshPhysicalMaterial({ color: t.color, roughness: t.roughness, metalness: t.metalness, transmission: 0.6, transparent: true, opacity: 0.9 });
+                    } else {
+                        geom = new THREE.BoxGeometry(size * 0.95, 0.18, size * 0.95);
+                        mat = new THREE.MeshStandardMaterial({ 
+                            color: t.color, 
+                            roughness: t.roughness, 
+                            metalness: t.metalness,
+                            emissive: t.emissive || 0x000000,
+                            emissiveIntensity: t.emissive ? 0.4 : 0
+                        });
                     }
 
-                    const mat = new THREE.MeshLambertMaterial({ color: t.color, flatShading: true });
                     const mesh = new THREE.Mesh(geom, mat);
-                    mesh.position.set(offset + x * size, t === TERRAIN.ROCK ? 0.3 : 0, offset + y * size);
+                    mesh.position.set(offset + x * size, t === TERRAIN.ROCK ? 0.7 : 0, offset + y * size);
                     mesh.receiveShadow = true;
+                    mesh.castShadow = (t === TERRAIN.ROCK);
                     mesh.userData = { gridX: x, gridY: y, isTile: true };
 
                     scene.add(mesh);
@@ -279,14 +317,8 @@
         }
 
         function spawnLeaders() {
-            // Player Leader (3, 7)
-            const pLeader = { name: 'Königlicher Paladin', atk: 2000, def: 2000, owner: 'player', isLeader: true };
-            boardGrid[3][7].unit = pLeader;
-
-            // Enemy Leader (4, 0)
-            const eLeader = { name: 'Schatten-Imperator', atk: 2000, def: 2000, owner: 'enemy', isLeader: true };
-            boardGrid[4][0].unit = eLeader;
-
+            boardGrid[3][7].unit = { name: 'Königlicher Paladin', atk: 2000, def: 2000, owner: 'player', isLeader: true };
+            boardGrid[4][0].unit = { name: 'Schatten-Imperator', atk: 2000, def: 2000, owner: 'enemy', isLeader: true };
             renderUnits();
         }
 
@@ -303,25 +335,29 @@
                     if (unit) {
                         const group = new THREE.Group();
 
-                        // 32-Bit Retro Cylinder Base
-                        const baseGeo = new THREE.CylinderGeometry(0.38, 0.42, 0.25, 8); // Low side count for retro look
-                        const baseMat = new THREE.MeshLambertMaterial({
-                            color: unit.owner === 'player' ? 0x2563eb : 0xd97706,
-                            flatShading: true
+                        // High-End PBR Cylinder Base
+                        const baseGeo = new THREE.CylinderGeometry(0.4, 0.45, 0.25, 32);
+                        const baseMat = new THREE.MeshStandardMaterial({
+                            color: unit.owner === 'player' ? 0x2563eb : 0xdc2626,
+                            metalness: 0.6,
+                            roughness: 0.2
                         });
                         const baseMesh = new THREE.Mesh(baseGeo, baseMat);
                         baseMesh.position.y = 0.25;
                         baseMesh.castShadow = true;
                         group.add(baseMesh);
 
-                        // Retro Octahedron / Top Icon
-                        const topGeo = unit.isLeader ? new THREE.OctahedronGeometry(0.3) : new THREE.BoxGeometry(0.35, 0.35, 0.35);
-                        const topMat = new THREE.MeshLambertMaterial({
-                            color: unit.isLeader ? 0xfacc15 : 0xf8fafc,
-                            flatShading: true
+                        // Metallic Crystal / Token Top
+                        const topGeo = unit.isLeader ? new THREE.OctahedronGeometry(0.35) : new THREE.BoxGeometry(0.4, 0.4, 0.4);
+                        const topMat = new THREE.MeshStandardMaterial({
+                            color: unit.isLeader ? 0xf59e0b : 0xf8fafc,
+                            metalness: 0.8,
+                            roughness: 0.1,
+                            emissive: unit.isLeader ? 0xd97706 : 0x000000,
+                            emissiveIntensity: unit.isLeader ? 0.5 : 0
                         });
                         const topMesh = new THREE.Mesh(topGeo, topMat);
-                        topMesh.position.y = 0.65;
+                        topMesh.position.y = 0.75;
                         topMesh.castShadow = true;
                         group.add(topMesh);
 
@@ -335,9 +371,7 @@
             }
         }
 
-        // --- SELECTION & TOUCH CONTROLS ---
         function handlePointerDown(e) {
-            // Ignore UI clicks
             if (e.clientY > window.innerHeight - 170 || e.clientY < 70) return;
 
             mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
@@ -371,7 +405,6 @@
             if (!isPlayerTurn) return;
             const target = boardGrid[x][y];
 
-            // 1. SUMMON FROM HAND
             if (selectedHandIndex !== null) {
                 if (!target.unit && isAdjacentToPlayer(x, y) && target.terrain !== TERRAIN.ROCK) {
                     if (playerSP < 1) {
@@ -380,75 +413,63 @@
                     }
 
                     const card = playerHand[selectedHandIndex];
-                    target.unit = {
-                        name: card.name,
-                        atk: card.atk,
-                        def: card.def,
-                        owner: 'player'
-                    };
+                    target.unit = { name: card.name, atk: card.atk, def: card.def, owner: 'player' };
 
                     playerHand.splice(selectedHandIndex, 1);
                     selectedHandIndex = null;
                     playerSP -= 1;
 
-                    playRetroSound('summon');
+                    playCinematicSound('summon');
                     renderUnits();
                     resetHighlights();
                     updateUI();
-                    setMessage(`"${target.unit.name}" beschworen!`);
+                    setMessage(`"${target.unit.name}" erfolgreich beschworen!`);
                 } else {
                     setMessage("Ungültiges Beschwörungsfeld!");
                 }
                 return;
             }
 
-            // 2. SELECT UNIT ON FIELD
             if (target.unit && target.unit.owner === 'player') {
                 selectedFieldUnit = { x, y };
-                playRetroSound('select');
+                playCinematicSound('select');
                 highlightMoveFields(x, y);
-                setMessage(`"${target.unit.name}" gewählt. Klicke ein angrenzendes Feld an!`);
+                setMessage(`"${target.unit.name}" ausgewählt. Wähle ein Zielfeld.`);
                 return;
             }
 
-            // 3. MOVE OR ATTACK
             if (selectedFieldUnit) {
-                const sx = selectedFieldUnit.x;
-                const sy = selectedFieldUnit.y;
+                const sx = selectedFieldUnit.x, sy = selectedFieldUnit.y;
                 const dist = Math.abs(x - sx) + Math.abs(y - sy);
 
                 if (dist === 1 && target.terrain !== TERRAIN.ROCK) {
                     const myUnit = boardGrid[sx][sy].unit;
 
-                    // ATTACK ENEMY
                     if (target.unit && target.unit.owner === 'enemy') {
-                        playRetroSound('attack');
+                        playCinematicSound('attack');
                         if (target.unit.isLeader) {
                             enemyLP -= myUnit.atk;
                             setMessage(`Direktangriff auf Anführer! -${myUnit.atk} LP`);
                             if (enemyLP <= 0) {
-                                alert("SIEG! Du hast den gegnerischen Anführer vernichtet!");
+                                alert("SIEG! Du hast den Gegner vernichtet!");
                                 location.reload();
                             }
                         } else {
                             if (myUnit.atk >= target.unit.atk) {
-                                setMessage(`Gegnerisches "${target.unit.name}" zerstört!`);
+                                setMessage(`Gegnerisches "${target.unit.name}" vernichtet!`);
                                 target.unit = myUnit;
                                 boardGrid[sx][sy].unit = null;
                             } else {
-                                setMessage("Dein Angriff war zu schwach! Einheit verloren.");
+                                setMessage("Angriff gescheitert! Einheit verloren.");
                                 boardGrid[sx][sy].unit = null;
                             }
                         }
-                    } 
-                    // MOVE TO EMPTY TILE
-                    else if (!target.unit) {
-                        // Check Abyss
+                    } else if (!target.unit) {
                         if (target.terrain === TERRAIN.ABYSS && myUnit.atk > 1500) {
                             setMessage(`"${myUnit.name}" wurde vom Abgrund verschlungen (>1500 ATK)!`);
                             boardGrid[sx][sy].unit = null;
                         } else {
-                            playRetroSound('select');
+                            playCinematicSound('select');
                             target.unit = myUnit;
                             boardGrid[sx][sy].unit = null;
                             setMessage("Einheit bewegt.");
@@ -460,7 +481,7 @@
                     resetHighlights();
                     updateUI();
                 } else {
-                    setMessage("Feld zu weit entfernt!");
+                    setMessage("Ziel zu weit entfernt!");
                 }
             }
         }
@@ -479,12 +500,11 @@
 
         function highlightMoveFields(sx, sy) {
             resetHighlights();
-            const dirs = [[0,1], [0,-1], [1,0], [-1,0]];
-            dirs.forEach(d => {
+            [[0,1], [0,-1], [1,0], [-1,0]].forEach(d => {
                 const nx = sx + d[0], ny = sy + d[1];
                 if (nx >= 0 && nx < 8 && ny >= 0 && ny < 8) {
                     if (boardGrid[nx][ny].terrain !== TERRAIN.ROCK) {
-                        boardMeshes[nx][ny].material.color.setHex(0x22c55e); // Green
+                        boardMeshes[nx][ny].material.color.setHex(0x10b981); // Emerald highlight
                     }
                 }
             });
@@ -506,8 +526,8 @@
             } else {
                 selectedHandIndex = index;
                 selectedFieldUnit = null;
-                playRetroSound('select');
-                setMessage(`"${playerHand[index].name}" gewählt. Klicke ein freies Feld neben deinen Einheiten an!`);
+                playCinematicSound('select');
+                setMessage(`"${playerHand[index].name}" gewählt. Platziere sie auf dem Feld!`);
             }
             updateUI();
         }
@@ -525,17 +545,14 @@
         }
 
         function executeAITurn() {
-            // Simple Enemy AI Action
-            let act = false;
             for (let x = 0; x < 8; x++) {
                 for (let y = 0; y < 8; y++) {
                     const u = boardGrid[x][y].unit;
-                    if (u && u.owner === 'enemy' && !act) {
-                        // Move down towards player
+                    if (u && u.owner === 'enemy') {
                         if (y < 7 && !boardGrid[x][y+1].unit && boardGrid[x][y+1].terrain !== TERRAIN.ROCK) {
                             boardGrid[x][y+1].unit = u;
                             boardGrid[x][y].unit = null;
-                            act = true;
+                            break;
                         }
                     }
                 }
@@ -559,16 +576,16 @@
 
             playerHand.forEach((card, i) => {
                 const cardEl = document.createElement('div');
-                cardEl.className = `flex flex-col justify-between bg-slate-800 p-2 w-28 h-32 rounded pixel-card cursor-pointer ${selectedHandIndex === i ? 'selected-card' : ''}`;
+                cardEl.className = `glass-card p-3 w-32 h-36 rounded-2xl cursor-pointer flex flex-col justify-between ${selectedHandIndex === i ? 'selected-card' : ''}`;
                 cardEl.onclick = () => selectCard(i);
                 cardEl.innerHTML = `
                     <div>
-                        <span class="text-[9px] text-amber-400 font-bold block">${card.type}</span>
-                        <h4 class="text-[11px] font-bold text-white leading-tight">${card.name}</h4>
+                        <span class="text-[9px] font-bold text-amber-400 uppercase tracking-wider block">${card.type}</span>
+                        <h4 class="text-xs font-bold text-white mt-1 leading-tight">${card.name}</h4>
                     </div>
-                    <div class="text-[9px] bg-slate-900 p-1 rounded">
-                        <div class="text-emerald-400">ATK: ${card.atk}</div>
-                        <div class="text-sky-400">DEF: ${card.def}</div>
+                    <div class="text-[10px] glass-panel p-1.5 rounded-xl border border-white/5">
+                        <div class="flex justify-between text-emerald-400"><span>ATK</span><span class="font-bold">${card.atk}</span></div>
+                        <div class="flex justify-between text-sky-400"><span>DEF</span><span class="font-bold">${card.def}</span></div>
                     </div>
                 `;
                 container.appendChild(cardEl);
